@@ -1,0 +1,482 @@
+unit CsApi;
+
+(* Small shared API helpers that more than one view needs: fetching a single
+   entry (by id or by author/slug), a single reply, and the unread-notification
+   count. Each returns False and fills err on failure rather than raising, so
+   callers can surface the message in a status bar. *)
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  CsSession, CsModels;
+
+function FetchEntryById(sess: TCsSession; const id: string;
+  out e: TEntry; out err: string): Boolean;
+function FetchEntryBySlug(sess: TCsSession; const username, slug: string;
+  out e: TEntry; out err: string): Boolean;
+function FetchReplyById(sess: TCsSession; const id: string;
+  out r: TReply; out err: string): Boolean;
+function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string): Boolean;
+
+{ Create a top-level entry (content only for now). Returns the new postId. }
+function CreateEntry(sess: TCsSession; const content: string;
+  out postId, err: string): Boolean;
+{ Create a reply to a post; pass parentReplyId to reply to a specific reply. }
+function CreateReply(sess: TCsSession; const postId, content: string;
+  out replyId, err: string; const parentReplyId: string = ''): Boolean;
+
+{ Delete your own entry / reply. }
+function DeleteEntry(sess: TCsSession; const id: string; out err: string): Boolean;
+function DeleteReply(sess: TCsSession; const id: string; out err: string): Boolean;
+
+{ Send a cIRC message (content may begin with / for a server-side command). }
+function SendChatMessage(sess: TCsSession; const roomId, content: string;
+  out messageId, err: string): Boolean;
+
+{ Announce presence in a room (heartbeat). Returns the cadence to use. }
+function AnnouncePresence(sess: TCsSession; const roomId: string;
+  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+{ Remove your presence from a room (on leave). }
+function LeavePresence(sess: TCsSession; const roomId: string; out err: string): Boolean;
+
+{ Follow a user by their userId. Returns the follow document id. }
+function FollowUser(sess: TCsSession; const followedId: string;
+  out followId, err: string): Boolean;
+
+{ Bookmark an entry; remove a bookmark by its document id. }
+function CreateBookmarkPost(sess: TCsSession; const postId: string;
+  out bookmarkId, err: string): Boolean;
+function RemoveBookmark(sess: TCsSession; const bookmarkId: string; out err: string): Boolean;
+
+{ C-Mail: start/get a conversation with a user; send; mark read. }
+function StartConversation(sess: TCsSession; const recipientUsername: string;
+  out conversationId, otherUsername, err: string): Boolean;
+function SendCMail(sess: TCsSession; const conversationId, content: string;
+  out messageId, err: string): Boolean;
+function MarkCMailRead(sess: TCsSession; const conversationId: string;
+  out err: string): Boolean;
+{ Publish/clear your "is typing" flag in a conversation. }
+function SendTyping(sess: TCsSession; const conversationId: string;
+  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+function StopTyping(sess: TCsSession; const conversationId: string; out err: string): Boolean;
+
+implementation
+
+uses
+  SysUtils, fpjson, CsHttp;
+
+function GetEntry(sess: TCsSession; const path: string;
+  out e: TEntry; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj(path);
+    try
+      d := CsData(env);
+      e := ParseEntry(d);
+      Result := e.PostId <> '';
+      if not Result then
+        err := 'Entry not found';
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function FetchEntryById(sess: TCsSession; const id: string;
+  out e: TEntry; out err: string): Boolean;
+begin
+  Result := GetEntry(sess, '/v1/posts/' + id, e, err);
+end;
+
+function FetchEntryBySlug(sess: TCsSession; const username, slug: string;
+  out e: TEntry; out err: string): Boolean;
+begin
+  Result := GetEntry(sess, '/v1/users/' + username + '/posts/' + slug, e, err);
+end;
+
+function FetchReplyById(sess: TCsSession; const id: string;
+  out r: TReply; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj('/v1/replies/' + id);
+    try
+      d := CsData(env);
+      r := ParseReply(d);
+      Result := r.PostId <> '';
+      if not Result then
+        err := 'Reply not found';
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  count := 0;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj('/v1/notifications/unread-count');
+    try
+      d := CsData(env);
+      count := d.Get('count', 0);
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function CreateEntry(sess: TCsSession; const content: string;
+  out postId, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  postId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    try
+      env := sess.Client.PostJSONObj('/v1/posts', body);
+      try
+        d := CsData(env);
+        postId := d.Get('postId', '');
+        Result := postId <> '';
+        if not Result then
+          err := 'Server did not return a postId';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function CreateReply(sess: TCsSession; const postId, content: string;
+  out replyId, err: string; const parentReplyId: string = ''): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  replyId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('postId', postId);
+    body.Add('content', content);
+    if parentReplyId <> '' then
+      body.Add('parentReplyId', parentReplyId);
+    try
+      env := sess.Client.PostJSONObj('/v1/replies', body);
+      try
+        d := CsData(env);
+        replyId := d.Get('replyId', '');
+        Result := replyId <> '';
+        if not Result then
+          err := 'Server did not return a replyId';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function DeleteAt(sess: TCsSession; const path: string; out err: string): Boolean;
+var
+  env: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.DeleteJSONObj(path);
+    env.Free;
+    Result := True;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function DeleteEntry(sess: TCsSession; const id: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/posts/' + id, err);
+end;
+
+function DeleteReply(sess: TCsSession; const id: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/replies/' + id, err);
+end;
+
+function SendChatMessage(sess: TCsSession; const roomId, content: string;
+  out messageId, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  messageId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    try
+      env := sess.Client.PostJSONObj('/v1/circ/' + roomId, body);
+      try
+        d := CsData(env);
+        messageId := d.Get('messageId', '');
+        Result := messageId <> '';
+        if not Result then
+          err := 'Server did not return a messageId';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function AnnouncePresence(sess: TCsSession; const roomId: string;
+  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  heartbeatMs := 30000;
+  staleAfterMs := 180000;
+  err := '';
+  try
+    env := sess.Client.PostJSONObj('/v1/circ/' + roomId + '/presence', nil);
+    try
+      d := CsData(env);
+      heartbeatMs := d.Get('heartbeatMs', heartbeatMs);
+      staleAfterMs := d.Get('staleAfterMs', staleAfterMs);
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function LeavePresence(sess: TCsSession; const roomId: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/circ/' + roomId + '/presence', err);
+end;
+
+function FollowUser(sess: TCsSession; const followedId: string;
+  out followId, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  followId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('followedId', followedId);
+    try
+      env := sess.Client.PostJSONObj('/v1/follows', body);
+      try
+        d := CsData(env);
+        followId := d.Get('id', d.Get('followId', ''));
+        Result := True;
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function CreateBookmarkPost(sess: TCsSession; const postId: string;
+  out bookmarkId, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  bookmarkId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('postId', postId);
+    body.Add('type', 'post');
+    try
+      env := sess.Client.PostJSONObj('/v1/bookmarks', body);
+      try
+        d := CsData(env);
+        bookmarkId := d.Get('id', d.Get('bookmarkId', ''));
+        Result := True;
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function RemoveBookmark(sess: TCsSession; const bookmarkId: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/bookmarks/' + bookmarkId, err);
+end;
+
+function StartConversation(sess: TCsSession; const recipientUsername: string;
+  out conversationId, otherUsername, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+  ou: TJSONData;
+begin
+  Result := False;
+  conversationId := '';
+  otherUsername := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('recipientUsername', recipientUsername);
+    try
+      env := sess.Client.PostJSONObj('/v1/cmail', body);
+      try
+        d := CsData(env);
+        conversationId := d.Get('conversationId', '');
+        ou := d.Find('otherUser');
+        if (ou <> nil) and (ou is TJSONObject) then
+          otherUsername := TJSONObject(ou).Get('username', '');
+        Result := conversationId <> '';
+        if not Result then
+          err := 'No conversationId returned';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function SendCMail(sess: TCsSession; const conversationId, content: string;
+  out messageId, err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  messageId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    try
+      env := sess.Client.PostJSONObj('/v1/cmail/' + conversationId, body);
+      try
+        d := CsData(env);
+        messageId := d.Get('messageId', '');
+        Result := messageId <> '';
+        if not Result then
+          err := 'No messageId returned';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function MarkCMailRead(sess: TCsSession; const conversationId: string;
+  out err: string): Boolean;
+var
+  env: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.PostJSONObj('/v1/cmail/' + conversationId + '/read', nil);
+    env.Free;
+    Result := True;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function SendTyping(sess: TCsSession; const conversationId: string;
+  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  heartbeatMs := 3000;
+  staleAfterMs := 9000;
+  err := '';
+  try
+    env := sess.Client.PostJSONObj('/v1/cmail/' + conversationId + '/typing', nil);
+    try
+      d := CsData(env);
+      heartbeatMs := d.Get('heartbeatMs', heartbeatMs);
+      staleAfterMs := d.Get('staleAfterMs', staleAfterMs);
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function StopTyping(sess: TCsSession; const conversationId: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/cmail/' + conversationId + '/typing', err);
+end;
+
+end.

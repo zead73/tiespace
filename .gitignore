@@ -1,0 +1,9 @@
+/bin/
+/build/
+*.ppu
+*.o
+*.a
+*.compiled
+
+# Claude Code local settings (machine/session-specific, not for sharing)
+/.claude/
