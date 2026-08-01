@@ -17,27 +17,31 @@ A working, human-driven client. Confirmed against a live account.
 **Auth** — in-TUI login (`Q` logs out to it; reads the password from `~/.cs-pw`,
 remembers the email), session restore, token refresh, `0600` credential file.
 
-**Read/write (social)**
-- feed (paginated `GET /v1/posts`); `c` compose a new entry, `d` delete your own
-- thread view: full entry + word-wrapped content + nested replies; `c` reply;
-  `i` view post images (shells out to `chafa`); `d` delete your own entry
-- notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
+**Read / write (social)** — press `?` in the feed for the full keybinding list
+- feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
+- thread view: **selectable** entry + replies; `c` reply (to the entry or to a
+  specific reply, nested); `d` delete your own entry or reply; `p` author
+  profile; `i` view post images (shells out to `chafa`)
 - compose: multi-line UTF-8 editor, `Ctrl+G` review + confirm, rate-limited
+- notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
+- profile view (`p`): bio, stats, links, the user's entries; `f` follow
+- search (`/`): users, entries and replies — opens a hit's thread or profile
+- topics (`t`): browse topics, read the entries filed under one
+- bookmarks: `b` bookmark an entry, `B` open the list (open / remove)
 
-**Real-time (M3, complete)**
+**Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
   send + IRC slash-commands, scrollback, live online-users panel + presence
   heartbeat
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built** (optional): bookmarks list; a selectable reply list (reply to a
-specific reply + delete your own replies); profile view; topic browsing; search;
-guilds; in-room chat image viewer; chat-message delete.
+**Not yet built**: guilds; unfollow; in-room cIRC image viewer; chat-message
+delete; entry title / topics / NSFW fields in the composer.
 
 ## Build
 
-Requires: `fpc` 3.2.2, system OpenSSL 3, ncursesw. All present on `winter`.
+Requires: `fpc` 3.2.2, system OpenSSL 3, and wide ncurses (`ncursesw`).
 
 ```bash
 make app       # builds bin/cyberspace (the client)
@@ -49,17 +53,6 @@ Run `./bin/cyberspace` after logging in once (see below).
 
 The `crtbeginS.o` / `crtendS.o` linker warnings from FPC on Arch are harmless;
 the binary links and runs.
-
-### OpenSnitch note (winter)
-
-OpenSnitch gates outbound connections per-binary. A freshly compiled tiespace
-binary will hang with `Connection ... timed out` until you approve it — and the
-prompt appears on the **local desktop session, not over SSH**. To avoid
-re-approving on every recompile, make the OpenSnitch rule match on **process
-path** (and destination host) rather than the executable checksum, which changes
-each build. Hosts to allow: `api.cyberspace.online` (REST) and, from M3,
-`cyberspace-cyberspace-default-rtdb.europe-west1.firebasedatabase.app` (RTDB
-real-time stream).
 
 ## Architecture
 
