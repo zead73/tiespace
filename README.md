@@ -87,6 +87,10 @@ image, a few hundred MB once the compiler and libraries are added.
    cd tiespace && make app && ./bin/cyberspace
    ```
 
+Images: if `chafa` reports *"unknown file format"* on a `.webp`, its Alpine build
+lacks a WebP loader (as nixpkgs' does) — rebuild `chafa` with `libwebp`, or skip
+image viewing.
+
 **Caveats (I haven't tested the Alpine+musl combo).** FPC 3.2.2 does run on
 Alpine's musl libc, but it's a less-trodden path than glibc. If a freshly built
 binary won't start with a dynamic-loader error, add the musl→glibc loader alias:
