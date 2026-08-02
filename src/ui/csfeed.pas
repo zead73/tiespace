@@ -148,7 +148,7 @@ var
       '  b                 bookmark      B       bookmarks list',
       '  /                 search        t       topics',
       '  n                 notifications',
-      '  C                 cIRC chat     M       C-Mail',
+      '  C                 cIRC chat     M       C-Mail (direct msgs)',
       '  r                 reload        Q       log out',
       '  q                 quit',
       '',
