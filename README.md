@@ -54,6 +54,49 @@ Run `./bin/cyberspace` after logging in once (see below).
 The `crtbeginS.o` / `crtendS.o` linker warnings from FPC on Arch are harmless;
 the binary links and runs.
 
+## Platforms
+
+Native on **Linux** and the **BSDs** — anywhere with FPC 3.2.2, wide ncurses,
+OpenSSL, and (for images) `chafa`. There is **no native Windows build**: the UI
+is built on ncurses and a few POSIX calls (`wcwidth`, Unix file-mode bits,
+`fpSystem`), so on Windows you run it under **WSL**.
+
+### Windows → WSL (Alpine, the small way)
+
+Alpine is the lightest WSL distro that can build tiespace — a few MB of base
+image, a few hundred MB once the compiler and libraries are added.
+
+1. **Get Alpine on WSL** (WSL2; run `wsl --update` first). Install *Alpine WSL*
+   from the Microsoft Store, or import the mini-rootfs / `.wsl` image from
+   <https://alpinelinux.org/downloads/>:
+   ```powershell
+   wsl --install --from-file alpine-<version>-x86_64.wsl
+   ```
+2. **Install the build deps.** FPC lives in Alpine's `testing` repo, so enable
+   `community` and `testing` in `/etc/apk/repositories`, then:
+   ```sh
+   apk update
+   apk add fpc binutils musl-dev ncurses-dev ncurses-terminfo-base \
+           openssl-dev chafa make git
+   ```
+   (`openssl-dev` is needed because FPC's OpenSSL unit loads the *unversioned*
+   `libssl.so`, which only the `-dev` package provides.)
+3. **Build and run:**
+   ```sh
+   git clone https://github.com/zead73/tiespace
+   cd tiespace && make app && ./bin/cyberspace
+   ```
+
+**Caveats (I haven't tested the Alpine+musl combo).** FPC 3.2.2 does run on
+Alpine's musl libc, but it's a less-trodden path than glibc. If a freshly built
+binary won't start with a dynamic-loader error, add the musl→glibc loader alias:
+```sh
+ln -s /lib/ld-musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+```
+If Alpine proves fiddly, any mainstream **glibc** WSL distro (Debian/Ubuntu) is
+the turnkey fallback — larger, but just:
+`sudo apt install fpc libncurses-dev libssl-dev chafa make git`.
+
 ## Architecture
 
 Layered, with everything below the UI independent of the TUI toolkit:
