@@ -569,37 +569,46 @@ var
 
   procedure RenderRow(y: LongInt; const room: TRoom; selected: Boolean);
   var
-    W, nameX, nameW, rightW, rightX: Integer;
-    right, name: string;
+    W, nameX, nameW, timeRight, onlineRight, onlineX, timeX, pair: Integer;
+    name, onlineStr, timeStr: string;
   begin
     W := ScreenCols;
     name := '#' + room.Slug;
     if room.Name <> '' then
       name := room.Name + '  (#' + room.Slug + ')';
-    right := IntToStr(room.OnlineCount) + ' online';
+    onlineStr := IntToStr(room.OnlineCount) + ' online';
     if room.LastMessageAt > 0 then
-      right := right + '  ·  ' + RelativeTimeMs(room.LastMessageAt);
-    rightW := VisibleWidth(right);
+      timeStr := RelativeTimeMs(room.LastMessageAt)
+    else
+      timeStr := '';
+
+    // Fixed, right-aligned columns so counts and times line up down the list.
+    timeRight := W - 2;              // right edge of the time column
+    onlineRight := timeRight - 8;    // right edge of the online column
     nameX := 2;
-    rightX := W - rightW - 1;
-    nameW := rightX - nameX - 1;
+    nameW := onlineRight - 10 - nameX;
     if nameW < 4 then
       nameW := 4;
+    onlineX := onlineRight - VisibleWidth(onlineStr) + 1;
+    timeX := timeRight - VisibleWidth(timeStr) + 1;
 
     if selected then
     begin
       DrawBar(y, cpSelect, '');
       DrawText(y, 0, cpSelect, '›');
-      DrawText(y, nameX, cpSelect, PadOrTrunc(name, nameW), True);
-      if rightX > 0 then
-        DrawText(y, rightX, cpSelect, right);
+      pair := cpSelect;
     end
     else
-    begin
+      pair := cpMeta;
+
+    if selected then
+      DrawText(y, nameX, cpSelect, PadOrTrunc(name, nameW), True)
+    else
       DrawText(y, nameX, cpAccent, PadOrTrunc(name, nameW), True);
-      if rightX > 0 then
-        DrawText(y, rightX, cpMeta, right);
-    end;
+    if onlineX > nameX then
+      DrawText(y, onlineX, pair, onlineStr);
+    if (timeStr <> '') and (timeX > onlineX) then
+      DrawText(y, timeX, pair, timeStr);
   end;
 
   procedure Redraw;
