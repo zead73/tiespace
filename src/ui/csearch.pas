@@ -239,6 +239,8 @@ begin
             SetLength(query, Length(query) - 1);
             qCur := Length(query);
           end;
+        keyPaste:
+          query := query + PasteText(False);
       else
         if (key >= 32) and (key <= 126) then
           query := query + Chr(key)

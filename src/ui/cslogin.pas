@@ -179,6 +179,11 @@ begin
           if typedPw <> '' then
             SetLength(typedPw, Length(typedPw) - 1);
         end;
+      keyPaste:
+        if field = 0 then
+          email := email + PasteText(False)
+        else
+          typedPw := typedPw + PasteText(False);
     else
       if (key >= 32) and (key < 127) then
       begin

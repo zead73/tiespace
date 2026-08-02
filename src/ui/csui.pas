@@ -22,6 +22,8 @@ const
   cpNsfw   = 6;
   cpError  = 7;
 
+  keyPaste = $1000; // UIGetKey returns this when a bracketed paste was captured
+
 type
   TTextLines = array of string;
   TRenderLine = record
@@ -87,10 +89,21 @@ function UIConfirm(const question: string): Boolean;
 procedure UISuspend;
 procedure UIResume;
 
+{ The most recent bracketed paste, sanitised. Valid right after UIGetKey returns
+  keyPaste. keepNewlines: true keeps embedded line breaks (for the multi-line
+  composer), false flattens them to spaces (for single-line inputs). }
+function PasteText(keepNewlines: Boolean): string;
+
 implementation
 
 const
   LC_ALL = 6; // glibc
+  cPasteBegin = $1001; // internal key codes for the bracketed-paste markers
+  cPasteEnd   = $1002;
+
+var
+  FLastPaste: string = '';
+  FCurTimeout: LongInt = -1; // mirrors the last UIInputTimeout, to restore after an ESC peek
 
 function setlocale(category: LongInt; locale: PChar): PChar; cdecl; external 'c' name 'setlocale';
 function wcwidth(wc: LongInt): LongInt; cdecl; external 'c' name 'wcwidth';
@@ -190,6 +203,15 @@ begin
     Result := Result + StringOfChar(' ', cols - w);
 end;
 
+{ Write a control string straight to the terminal. ncurses' putp() goes through
+  C stdio, which ncurses never flushes, so a mode-set like bracketed paste would
+  never actually reach the terminal; a direct write does. }
+procedure TermRaw(const s: string);
+begin
+  if s <> '' then
+    FileWrite(StdOutputHandle, s[1], Length(s));
+end;
+
 procedure UIInit;
 begin
   setlocale(LC_ALL, ''); // adopt the terminal's UTF-8 locale before initscr
@@ -199,6 +221,11 @@ begin
   keypad(stdscr, True);
   curs_set(0);
   scrollok(stdscr, False);
+  // Bracketed paste: enable it and teach ncurses the markers, so a paste arrives
+  // as one keyPaste event instead of its text being read as keystrokes/commands.
+  define_key(PChar(#27'[200~'), cPasteBegin);
+  define_key(PChar(#27'[201~'), cPasteEnd);
+  TermRaw(#27'[?2004h');
   if has_colors then
   begin
     start_color;
@@ -215,6 +242,7 @@ end;
 
 procedure UIShutdown;
 begin
+  TermRaw(#27'[?2004l'); // disable bracketed paste
   curs_set(1);
   endwin;
 end;
@@ -240,8 +268,49 @@ begin
 end;
 
 function UIGetKey: LongInt;
+var
+  k, k2: LongInt;
 begin
-  Result := getch;
+  k := getch;
+  if k = cPasteBegin then
+  begin
+    FLastPaste := '';
+    repeat
+      k := getch;
+      if (k = cPasteEnd) or (k = -1) then
+        Break;
+      if (k >= 0) and (k <= 255) then
+        FLastPaste := FLastPaste + Chr(k); // raw bytes rebuild UTF-8 correctly
+      // any function-key codes inside a paste are ignored
+    until False;
+    Exit(keyPaste);
+  end;
+  if k = 27 then
+  begin
+    // Tell a real Escape press (nothing follows) from an unrecognised escape
+    // sequence (e.g. an enhanced-keyboard report for Ctrl+Shift+V): peek for a
+    // byte that arrives immediately.
+    wtimeout(stdscr, 0);
+    k2 := getch;
+    if k2 = -1 then
+    begin
+      wtimeout(stdscr, FCurTimeout);
+      Exit(27); // lone ESC = the Escape key
+    end;
+    repeat // drain the rest of the sequence, then swallow it
+      k2 := getch;
+    until k2 = -1;
+    wtimeout(stdscr, FCurTimeout);
+    Exit(-1); // report "no key" so an unknown sequence never triggers an action
+  end;
+  Result := k;
+end;
+
+function PasteText(keepNewlines: Boolean): string;
+begin
+  Result := StringReplace(FLastPaste, #13, '', [rfReplaceAll]);
+  if not keepNewlines then
+    Result := StringReplace(Result, #10, ' ', [rfReplaceAll]);
 end;
 
 procedure ApplyAttr(pair: Integer; bold: Boolean);
@@ -458,6 +527,7 @@ end;
 
 procedure UIInputTimeout(ms: Integer);
 begin
+  FCurTimeout := ms;
   wtimeout(stdscr, ms);
 end;
 
@@ -488,6 +558,7 @@ begin
   clear;    // blanks stdscr and forces a physical screen clear on next refresh,
   refresh;  // which removes the external viewer's output; re-enters curses mode
   curs_set(0);
+  TermRaw(#27'[?2004h'); // re-enable bracketed paste (an endwin may have reset it)
 end;
 
 end.

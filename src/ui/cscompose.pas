@@ -258,6 +258,8 @@ begin
         cur := rows[crow].StartByte;
       KEY_END:
         cur := rows[crow].StartByte + Length(rows[crow].Text);
+      keyPaste:
+        InsertStr(PasteText(True)); // paste keeps its line breaks here
     else
       if (key >= 32) and (key <= 126) then
         InsertStr(Chr(key))

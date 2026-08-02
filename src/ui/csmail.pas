@@ -502,6 +502,7 @@ begin
         KEY_DOWN: ScrollDown(1);
         KEY_PPAGE: ScrollUp(visible);
         KEY_NPAGE: ScrollDown(visible);
+        keyPaste: InsertInput(PasteText(False));
       else
         if (key >= 32) and (key <= 126) then
           InsertInput(Chr(key))
@@ -556,6 +557,11 @@ var
           begin
             cur := PrevCharBoundary(uname, cur);
             uname := Copy(uname, 1, cur);
+          end;
+        keyPaste:
+          begin
+            uname := uname + PasteText(False);
+            cur := Length(uname);
           end;
       else
         if (k >= 32) and (k <= 126) then
