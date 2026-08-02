@@ -119,3 +119,7 @@ src/
   spikes/spike_login.pas  M0 transport check
   spikes/session_test.pas session/refresh harness
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE). © 2026 Zead.
