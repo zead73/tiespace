@@ -269,15 +269,34 @@ begin
   until False;
 end;
 
+{ A one-key content-warning prompt: y = NSFW, Enter/n/Esc = not. }
+function AskNSFW: Boolean;
+var
+  k: LongInt;
+begin
+  Result := False;
+  DrawBar(ScreenRows - 1, cpStatus, ' Mark as NSFW?    [y] yes    [Enter/n] no');
+  UIRefresh;
+  repeat
+    k := UIGetKey;
+    case k of
+      Ord('y'), Ord('Y'): Exit(True);
+      Ord('n'), Ord('N'), 10, 13, 27: Exit(False);
+    end;
+  until False;
+end;
+
 function SendLoop(sess: TCsSession; const header, action: string;
   isReply: Boolean; const postId, parentReplyId: string): Boolean;
 var
   buffer, newId, err, msg, title, topics: string;
+  nsfw: Boolean;
 begin
   Result := False;
   buffer := '';
   title := '';
   topics := '';
+  nsfw := False;
   repeat
     if not EditText(header, buffer) then
       Exit(False); // Esc: cancelled
@@ -298,6 +317,7 @@ begin
         title := '';
       if not UIPromptLine('Topics (optional, space-separated):', topics) then
         topics := '';
+      nsfw := AskNSFW;
     end;
     if not Limiter.Check(action, msg) then
     begin
@@ -309,7 +329,7 @@ begin
       if isReply then
         Result := CreateReply(sess, postId, buffer, newId, err, parentReplyId)
       else
-        Result := CreateEntry(sess, buffer, newId, err, title, topics);
+        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw);
       if Result then
       begin
         Limiter.Note(action);

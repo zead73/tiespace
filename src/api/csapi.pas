@@ -23,7 +23,7 @@ function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string)
 { Create a top-level entry (content only for now). Returns the new postId. }
 function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
-  const topics: string = ''): Boolean;
+  const topics: string = ''; const isNSFW: Boolean = False): Boolean;
 { Create a reply to a post; pass parentReplyId to reply to a specific reply. }
 function CreateReply(sess: TCsSession; const postId, content: string;
   out replyId, err: string; const parentReplyId: string = ''): Boolean;
@@ -194,7 +194,7 @@ end;
 
 function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
-  const topics: string = ''): Boolean;
+  const topics: string = ''; const isNSFW: Boolean = False): Boolean;
 var
   body, env, d: TJSONObject;
 begin
@@ -208,6 +208,8 @@ begin
       body.Add('title', Trim(title));
     if Trim(topics) <> '' then
       AddTopics(body, topics);
+    if isNSFW then
+      body.Add('isNSFW', True);
     try
       env := sess.Client.PostJSONObj('/v1/posts', body);
       try

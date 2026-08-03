@@ -792,7 +792,6 @@ var
   procedure Redraw;
   var
     i, idx: Integer;
-    status: string;
   begin
     visible := ScreenRows - 2;
     if visible < 1 then

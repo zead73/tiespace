@@ -60,7 +60,6 @@ end;
 procedure RunSearch(sess: TCsSession);
 var
   query, err: string;
-  qCur: Integer;
   items: TSearchItems;
   sel, top, visible, key: Integer;
   editing: Boolean;
@@ -85,6 +84,7 @@ var
     empty: TEntry;
   begin
     SetLength(items, 0);
+    empty := Default(TEntry); // blank placeholder for user/reply hits (no entry)
     sel := 0;
     top := 0;
     err := '';
@@ -220,7 +220,6 @@ var
 
 begin
   query := '';
-  qCur := 0;
   err := '';
   editing := True;
   SetLength(items, 0);
@@ -235,10 +234,7 @@ begin
         10, 13, KEY_ENTER: DoSearch;
         KEY_BACKSPACE, 127, 8:
           if query <> '' then
-          begin
             SetLength(query, Length(query) - 1);
-            qCur := Length(query);
-          end;
         keyPaste:
           query := query + PasteText(False);
       else

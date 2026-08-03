@@ -22,9 +22,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - thread view: **selectable** entry + replies; `c` reply (to the entry or to a
   specific reply, nested); `d` delete your own entry or reply; `p` author
   profile; `i` view post images (shells out to `chafa`)
-- compose: multi-line UTF-8 editor (new entries can add an optional title and up
-  to 3 topics), `Ctrl+G` review + confirm, rate-limited; all text inputs accept
-  terminal paste (bracketed paste)
+- compose: multi-line UTF-8 editor (new entries can add an optional title, up
+  to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
+  text inputs accept terminal paste (bracketed paste)
 - notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
 - profile view (`p`): bio, stats, links, the user's entries; `f` follow/unfollow
 - search (`/`): users, entries and replies — opens a hit's thread or profile
@@ -39,7 +39,7 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: guilds; entry NSFW flag in the composer.
+**Not yet built**: guilds.
 
 ## Build
 
