@@ -102,6 +102,28 @@ If Alpine proves fiddly, any mainstream **glibc** WSL distro (Debian/Ubuntu) is
 the turnkey fallback — larger, but just:
 `sudo apt install fpc libncurses-dev libssl-dev chafa make git`.
 
+## Security & credentials
+
+**Your password is never written to disk.** At login it is held in memory only
+and sent to the API over HTTPS; nothing persists it.
+
+What the client stores — all under `$XDG_CONFIG_HOME/tiespace/` (i.e.
+`~/.config/tiespace/`), mode `0600`, outside this repo:
+
+- `session.json` — the long-lived **refresh token** plus `rtdbUrl`, `username`,
+  `userId`. This is a token (it's how you stay logged in), *not* your password.
+- `last-email` — the email to pre-fill on the login screen.
+
+`~/.cs-pw` is **optional and you create it yourself** — the client only ever
+*reads* it, never writes it. It's an accessibility accommodation: if the file
+exists, its contents are used as the password so you needn't type or paste it.
+Without it you just type the password at the login screen. If you do use it,
+`chmod 600 ~/.cs-pw`.
+
+The one credential kept at rest in plaintext (at `0600`) is the refresh token in
+`session.json` — standard for a CLI client, and it could be moved into the OS
+keyring (libsecret) for stronger at-rest storage if desired.
+
 ## Architecture
 
 Layered, with everything below the UI independent of the TUI toolkit:
