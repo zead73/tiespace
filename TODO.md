@@ -6,14 +6,16 @@ the M4 "polish" bucket, tracked here so we can check items off as we land them.
 
 ## API-backed (endpoints exist; the client just doesn't use them yet)
 
-### Notes — private notes with revision history
+### Notes — private notes with revision history ✅ done (feed key `N`)
 Private to you; editing creates a new revision rather than overwriting.
-- [ ] `csapi`: list / get (`?revision=N`) / list-revisions / create / update (PATCH) / delete
-- [ ] `csmodels`: `TNote` (+ revision number/metadata) and parser
-- [ ] `ui/csnotes.pas`: list → read (with revision history) → new / edit (reuse the composer) → delete
-- [ ] feed entry point (a key to open Notes)
-- [ ] rate rule — already present (`note` = 3/min, 30/day); reuse it
-- [ ] README + this checklist
+- [x] `csapi`: get (`FetchNote`, `?revision=N`) / create / update (PATCH) / delete
+      (list + revision history are read inline in the view)
+- [x] `csmodels`: `TNote` + parser
+- [x] `ui/csnotes.pas`: list → read (scrollable) → new / edit (reuse the composer) →
+      revision history → view a past revision → delete
+- [x] feed entry point (`N`)
+- [x] rate rule — reused existing `note` (3/min, 30/day)
+- [x] README + this checklist
 
 ### Thread watching — `thread_reply` notifications for threads you follow
 Auto-watched when you reply or are @mentioned; also manual watch/unwatch.

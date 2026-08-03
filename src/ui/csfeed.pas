@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsRateLimit;
+  CsNotes, CsRateLimit;
 
 const
   PAGE = 25;
@@ -139,7 +139,7 @@ var
 
   procedure ShowHelp;
   const
-    h: array[0..16] of string = (
+    h: array[0..17] of string = (
       'tiespace — feed keys',
       '',
       '  j / k, ↑ / ↓      move          Enter   open thread',
@@ -148,12 +148,13 @@ var
       '  c                 new entry     d       delete own entry',
       '  b                 bookmark      B       bookmarks list',
       '  /                 search        t       topics',
-      '  n                 notifications',
+      '  n                 notifications N       notes (private)',
       '  C                 cIRC chat     M       C-Mail (direct msgs)',
       '  r                 reload        Q       log out',
       '  q                 quit',
       '',
       'In a guild: Enter thread · c new · m members · J/L join/leave',
+      'In notes: Enter read · c new · e edit · v revisions · d delete',
       'In a thread: c reply · i images · d delete · q back',
       'In chat/mail: type + Enter send · ↑/PgUp scroll · Esc back',
       'Press any key to close');
@@ -210,9 +211,9 @@ var
       else
         more := '';
       if Length(entries) = 0 then
-        status := ' no entries   ·   c post · C chat · g guilds · ? help · q quit'
+        status := ' no entries   ·   c post · C chat · g guilds · N notes · ? help · q quit'
       else
-        status := Format(' %d/%d%s   ·   Enter open · c post · g guilds · ? help · q quit',
+        status := Format(' %d/%d%s   ·   Enter open · c post · g guilds · N notes · ? help · q quit',
           [sel + 1, Length(entries), more]);
       DrawBar(ScreenRows - 1, cpStatus, status);
     end;
@@ -313,6 +314,11 @@ begin
       Ord('M'):
         begin
           RunMail(sess);
+          err := '';
+        end;
+      Ord('N'):
+        begin
+          RunNotes(sess);
           err := '';
         end;
       Ord('p'):

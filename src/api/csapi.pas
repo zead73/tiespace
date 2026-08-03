@@ -82,6 +82,17 @@ function CreateGuildThread(sess: TCsSession; const slug, content: string;
 function JoinGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
 
+{ Notes: private, revisioned. Fetch one (revision 0 = latest); create; update
+  (PATCH creates a new revision); soft-delete. The list and revision history are
+  read inline by the view. }
+function FetchNote(sess: TCsSession; const id: string; revision: Integer;
+  out n: TNote; out err: string): Boolean;
+function CreateNote(sess: TCsSession; const content: string;
+  out noteId, err: string; const topics: string = ''): Boolean;
+function UpdateNote(sess: TCsSession; const noteId, content, topics: string;
+  out err: string): Boolean;
+function DeleteNote(sess: TCsSession; const id: string; out err: string): Boolean;
+
 implementation
 
 uses
@@ -694,6 +705,95 @@ end;
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
 begin
   Result := PostNoBody(sess, '/v1/guilds/' + slug + '/leave', err);
+end;
+
+function FetchNote(sess: TCsSession; const id: string; revision: Integer;
+  out n: TNote; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+  path: string;
+begin
+  Result := False;
+  err := '';
+  path := '/v1/notes/' + id;
+  if revision > 0 then
+    path := path + '?revision=' + IntToStr(revision);
+  try
+    env := sess.Client.GetJSONObj(path);
+    try
+      d := CsData(env);
+      n := ParseNote(d);
+      Result := n.Id <> '';
+      if not Result then
+        err := 'Note not found';
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function CreateNote(sess: TCsSession; const content: string;
+  out noteId, err: string; const topics: string = ''): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  noteId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    if Trim(topics) <> '' then
+      AddTopics(body, topics);
+    try
+      env := sess.Client.PostJSONObj('/v1/notes', body);
+      try
+        d := CsData(env);
+        noteId := d.Get('id', d.Get('noteId', ''));
+        Result := True; // creation succeeded even if the id shape surprises us
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function UpdateNote(sess: TCsSession; const noteId, content, topics: string;
+  out err: string): Boolean;
+var
+  body, env: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    if Trim(topics) <> '' then
+      AddTopics(body, topics);
+    try
+      env := sess.Client.PatchJSONObj('/v1/notes/' + noteId, body);
+      env.Free;
+      Result := True;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function DeleteNote(sess: TCsSession; const id: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/notes/' + id, err);
 end;
 
 end.

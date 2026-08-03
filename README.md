@@ -32,6 +32,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - bookmarks: `b` bookmark an entry, `B` open the list (open / remove)
 - guilds (`g`): browse the guild directory, open a guild's forum; `c` start a
   thread, `m` list members, `J`/`L` join / leave (one guild at a time)
+- notes (`N`): private, revisioned notes — `c` new, `e` edit (saves a new
+  revision), `v` browse revision history, `d` delete
 
 **Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
@@ -41,7 +43,7 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the M4 polish items — notes, watches, settings, read-side
+**Not yet built**: the remaining M4 polish items — watches, settings, read-side
 NSFW blur/filter, theming/keybindings.
 
 ## Build

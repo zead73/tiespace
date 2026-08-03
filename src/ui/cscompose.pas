@@ -23,6 +23,12 @@ function ComposeReplyTo(sess: TCsSession; const postId, parentReplyId, contextLa
 { Start a new thread in a guild's forum (title/topics like an entry, no NSFW). }
 function ComposeGuildThread(sess: TCsSession; const guildSlug, guildLabel: string): Boolean;
 
+{ Notes are private. ComposeNote writes a new one (content + optional topics);
+  EditNote re-opens an existing note's content for a revision (its topics are
+  carried through unchanged). Each returns True if something was saved. }
+function ComposeNote(sess: TCsSession): Boolean;
+function EditNote(sess: TCsSession; const noteId, startContent, keepTopics: string): Boolean;
+
 implementation
 
 uses
@@ -132,7 +138,9 @@ begin
   UIGetKey;
 end;
 
-function ConfirmPost(const content, user: string): Boolean;
+{ A full-screen review of the text with a y/n prompt. Header and prompt vary by
+  what's being confirmed (a public post, a private note, …). }
+function ConfirmReview(const header, content, prompt: string): Boolean;
 var
   rows: TTextLines;
   i, areaH: Integer;
@@ -140,7 +148,7 @@ var
 begin
   UICursorVisible(False);
   UIErase;
-  DrawBar(0, cpHeader, ' Review — post as @' + user);
+  DrawBar(0, cpHeader, header);
   areaH := ScreenRows - 3;
   if areaH < 1 then
     areaH := 1;
@@ -151,7 +159,7 @@ begin
       Break;
     DrawText(1 + i, 1, cpText, rows[i]);
   end;
-  DrawBar(ScreenRows - 1, cpStatus, ' Post this?    [y] post     [n] keep editing');
+  DrawBar(ScreenRows - 1, cpStatus, prompt);
   UIRefresh;
   repeat
     key := UIGetKey;
@@ -160,6 +168,12 @@ begin
       Ord('n'), Ord('N'), 27: Exit(False);
     end;
   until False;
+end;
+
+function ConfirmPost(const content, user: string): Boolean;
+begin
+  Result := ConfirmReview(' Review — post as @' + user, content,
+    ' Post this?    [y] post     [n] keep editing');
 end;
 
 { The editor. Returns True if the user asked to send (Ctrl+G), False on Esc.
@@ -367,6 +381,89 @@ function ComposeGuildThread(sess: TCsSession; const guildSlug, guildLabel: strin
 begin
   Result := SendLoop(sess, 'New thread in ' + guildLabel + ' — as @' + sess.Username,
     'guild_thread', False, '', '', guildSlug);
+end;
+
+function ComposeNote(sess: TCsSession): Boolean;
+var
+  buffer, topics, newId, err, msg: string;
+begin
+  Result := False;
+  buffer := '';
+  topics := '';
+  repeat
+    if not EditText('New note — private to you', buffer) then
+      Exit(False); // Esc: cancelled
+    if Trim(buffer) = '' then
+    begin
+      ShowMsg('Nothing to save.');
+      Continue;
+    end;
+    if CodepointCount(buffer) > MAX_CHARS then
+    begin
+      ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
+      Continue;
+    end;
+    if not UIPromptLine('Topics (optional, space-separated):', topics) then
+      topics := '';
+    if not Limiter.Check('note', msg) then
+    begin
+      ShowMsg(msg);
+      Continue;
+    end;
+    if ConfirmReview(' Review — private note', buffer,
+      ' Save this note?    [y] save     [n] keep editing') then
+    begin
+      Result := CreateNote(sess, buffer, newId, err, topics);
+      if Result then
+      begin
+        Limiter.Note('note');
+        ShowMsg('Saved. ✓');
+        Exit(True);
+      end
+      else
+        ShowMsg('Failed: ' + err);
+    end;
+  until False;
+end;
+
+function EditNote(sess: TCsSession; const noteId, startContent, keepTopics: string): Boolean;
+var
+  buffer, err, msg: string;
+begin
+  Result := False;
+  buffer := startContent;
+  repeat
+    if not EditText('Edit note — saving creates a new revision', buffer) then
+      Exit(False); // Esc: cancelled
+    if Trim(buffer) = '' then
+    begin
+      ShowMsg('Nothing to save.');
+      Continue;
+    end;
+    if CodepointCount(buffer) > MAX_CHARS then
+    begin
+      ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
+      Continue;
+    end;
+    if not Limiter.Check('note', msg) then
+    begin
+      ShowMsg(msg);
+      Continue;
+    end;
+    if ConfirmReview(' Review — edit note', buffer,
+      ' Save changes?    [y] save     [n] keep editing') then
+    begin
+      Result := UpdateNote(sess, noteId, buffer, keepTopics, err);
+      if Result then
+      begin
+        Limiter.Note('note');
+        ShowMsg('Saved. ✓');
+        Exit(True);
+      end
+      else
+        ShowMsg('Failed: ' + err);
+    end;
+  until False;
 end;
 
 end.

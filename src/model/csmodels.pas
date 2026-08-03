@@ -115,6 +115,17 @@ type
   end;
   TGuildMemberArray = array of TGuildMember;
 
+  TNote = record
+    Id: string;
+    Content: string;
+    CreatedAt: string;
+    UpdatedAt: string;
+    Revision: Integer;
+    Topics: array of string;
+    Deleted: Boolean;
+  end;
+  TNoteArray = array of TNote;
+
 function ParseEntry(o: TJSONObject): TEntry;
 function ParseEntryArray(a: TJSONArray): TEntryArray;
 function ParseReply(o: TJSONObject): TReply;
@@ -135,6 +146,8 @@ function ParseGuild(o: TJSONObject): TGuild;
 function ParseGuildArray(a: TJSONArray): TGuildArray;
 function ParseGuildMember(o: TJSONObject): TGuildMember;
 function ParseGuildMemberArray(a: TJSONArray): TGuildMemberArray;
+function ParseNote(o: TJSONObject): TNote;
+function ParseNoteArray(a: TJSONArray): TNoteArray;
 
 { Format a millisecond epoch as local HH:MM. }
 function MsToLocalHM(ms: Int64): string;
@@ -523,6 +536,46 @@ begin
     if a.Items[i] is TJSONObject then
     begin
       Result[n] := ParseGuildMember(TJSONObject(a.Items[i]));
+      Inc(n);
+    end;
+  SetLength(Result, n);
+end;
+
+function ParseNote(o: TJSONObject): TNote;
+var
+  td: TJSONData;
+  t: TJSONArray;
+  i: Integer;
+begin
+  Result.Id := o.Get('id', o.Get('noteId', ''));
+  Result.Content := DecodeEntities(o.Get('content', ''));
+  Result.CreatedAt := o.Get('createdAt', '');
+  Result.UpdatedAt := o.Get('updatedAt', o.Get('createdAt', ''));
+  Result.Revision := o.Get('revision', o.Get('revisionNumber', 0));
+  Result.Deleted := o.Get('deleted', False);
+  td := o.Find('topics');
+  if (td <> nil) and (td is TJSONArray) then
+  begin
+    t := TJSONArray(td);
+    SetLength(Result.Topics, t.Count);
+    for i := 0 to t.Count - 1 do
+      Result.Topics[i] := t.Items[i].AsString;
+  end;
+end;
+
+function ParseNoteArray(a: TJSONArray): TNoteArray;
+var
+  i, n: Integer;
+begin
+  SetLength(Result, 0);
+  if a = nil then
+    Exit;
+  n := 0;
+  SetLength(Result, a.Count);
+  for i := 0 to a.Count - 1 do
+    if a.Items[i] is TJSONObject then
+    begin
+      Result[n] := ParseNote(TJSONObject(a.Items[i]));
       Inc(n);
     end;
   SetLength(Result, n);
