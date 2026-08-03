@@ -19,7 +19,8 @@ implementation
 
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
-  CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsRateLimit;
+  CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
+  CsRateLimit;
 
 const
   PAGE = 25;
@@ -138,12 +139,12 @@ var
 
   procedure ShowHelp;
   const
-    h: array[0..15] of string = (
+    h: array[0..16] of string = (
       'tiespace — feed keys',
       '',
       '  j / k, ↑ / ↓      move          Enter   open thread',
-      '  g / G             top / bottom  PgUp/Dn page',
-      '  p                 author profile',
+      '  Home / G          top / bottom  PgUp/Dn page',
+      '  g                 guilds        p       author profile',
       '  c                 new entry     d       delete own entry',
       '  b                 bookmark      B       bookmarks list',
       '  /                 search        t       topics',
@@ -152,6 +153,7 @@ var
       '  r                 reload        Q       log out',
       '  q                 quit',
       '',
+      'In a guild: Enter thread · c new · m members · J/L join/leave',
       'In a thread: c reply · i images · d delete · q back',
       'In chat/mail: type + Enter send · ↑/PgUp scroll · Esc back',
       'Press any key to close');
@@ -208,9 +210,9 @@ var
       else
         more := '';
       if Length(entries) = 0 then
-        status := ' no entries   ·   c post · C chat · M mail · ? help · q quit'
+        status := ' no entries   ·   c post · C chat · g guilds · ? help · q quit'
       else
-        status := Format(' %d/%d%s   ·   Enter open · c post · / search · ? help · q quit',
+        status := Format(' %d/%d%s   ·   Enter open · c post · g guilds · ? help · q quit',
           [sel + 1, Length(entries), more]);
       DrawBar(ScreenRows - 1, cpStatus, status);
     end;
@@ -252,13 +254,18 @@ begin
         end;
       KEY_PPAGE:
         sel := sel - visible;
-      Ord('g'):
+      KEY_HOME:
         sel := 0;
-      Ord('G'):
+      KEY_END, Ord('G'):
         begin
           if cursor <> '' then
             LoadMore;
           sel := High(entries);
+        end;
+      Ord('g'):
+        begin
+          RunGuilds(sess);
+          err := '';
         end;
       Ord('r'):
         begin

@@ -72,6 +72,16 @@ function SendTyping(sess: TCsSession; const conversationId: string;
   out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
 function StopTyping(sess: TCsSession; const conversationId: string; out err: string): Boolean;
 
+{ Guilds: fetch one guild (with the caller's membership state); start a forum
+  thread; join; leave. Discovery/list endpoints are read inline by the view. }
+function FetchGuild(sess: TCsSession; const slug: string;
+  out g: TGuild; out err: string): Boolean;
+function CreateGuildThread(sess: TCsSession; const slug, content: string;
+  out postId, err: string; const title: string = '';
+  const topics: string = ''): Boolean;
+function JoinGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+
 implementation
 
 uses
@@ -596,6 +606,94 @@ end;
 function StopTyping(sess: TCsSession; const conversationId: string; out err: string): Boolean;
 begin
   Result := DeleteAt(sess, '/v1/cmail/' + conversationId + '/typing', err);
+end;
+
+{ POST with no body, discarding the envelope -- used by join/leave, whose only
+  outcome that matters here is success vs. the server's error (409/403/…). }
+function PostNoBody(sess: TCsSession; const path: string; out err: string): Boolean;
+var
+  env: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.PostJSONObj(path, nil);
+    env.Free;
+    Result := True;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function FetchGuild(sess: TCsSession; const slug: string;
+  out g: TGuild; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj('/v1/guilds/' + slug);
+    try
+      d := CsData(env);
+      g := ParseGuild(d);
+      Result := g.Slug <> '';
+      if not Result then
+        err := 'Guild not found';
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function CreateGuildThread(sess: TCsSession; const slug, content: string;
+  out postId, err: string; const title: string = '';
+  const topics: string = ''): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  postId := '';
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    if Trim(title) <> '' then
+      body.Add('title', Trim(title));
+    if Trim(topics) <> '' then
+      AddTopics(body, topics);
+    try
+      env := sess.Client.PostJSONObj('/v1/guilds/' + slug + '/posts', body);
+      try
+        d := CsData(env);
+        postId := d.Get('postId', '');
+        Result := postId <> '';
+        if not Result then
+          err := 'Server did not return a postId';
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function JoinGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+begin
+  Result := PostNoBody(sess, '/v1/guilds/' + slug + '/join', err);
+end;
+
+function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+begin
+  Result := PostNoBody(sess, '/v1/guilds/' + slug + '/leave', err);
 end;
 
 end.

@@ -62,6 +62,9 @@ begin
     'chat_delete': begin perMin := 5; perDay := 30; end;
     'cmail': begin perMin := 15; perDay := 300; end;
     'cmail_start': begin perMin := 5; perDay := 50; end;
+    'guild_thread': begin perMin := 2; perDay := 15; end;
+    'guild_join': begin perMin := 3; perDay := 15; end;
+    'guild_leave': begin perMin := 3; perDay := 15; end;
   else
     Result := False; // no known rule -> unlimited client-side
   end;

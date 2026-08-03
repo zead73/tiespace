@@ -20,6 +20,8 @@ function ComposeEntry(sess: TCsSession): Boolean;
 function ComposeReply(sess: TCsSession; const postId, contextLabel: string): Boolean;
 { Reply to a specific reply (nested, via parentReplyId). }
 function ComposeReplyTo(sess: TCsSession; const postId, parentReplyId, contextLabel: string): Boolean;
+{ Start a new thread in a guild's forum (title/topics like an entry, no NSFW). }
+function ComposeGuildThread(sess: TCsSession; const guildSlug, guildLabel: string): Boolean;
 
 implementation
 
@@ -287,7 +289,8 @@ begin
 end;
 
 function SendLoop(sess: TCsSession; const header, action: string;
-  isReply: Boolean; const postId, parentReplyId: string): Boolean;
+  isReply: Boolean; const postId, parentReplyId: string;
+  const guildSlug: string = ''): Boolean;
 var
   buffer, newId, err, msg, title, topics: string;
   nsfw: Boolean;
@@ -317,7 +320,8 @@ begin
         title := '';
       if not UIPromptLine('Topics (optional, space-separated):', topics) then
         topics := '';
-      nsfw := AskNSFW;
+      if guildSlug = '' then
+        nsfw := AskNSFW; // guild threads have no NSFW flag
     end;
     if not Limiter.Check(action, msg) then
     begin
@@ -328,6 +332,8 @@ begin
     begin
       if isReply then
         Result := CreateReply(sess, postId, buffer, newId, err, parentReplyId)
+      else if guildSlug <> '' then
+        Result := CreateGuildThread(sess, guildSlug, buffer, newId, err, title, topics)
       else
         Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw);
       if Result then
@@ -355,6 +361,12 @@ end;
 function ComposeReplyTo(sess: TCsSession; const postId, parentReplyId, contextLabel: string): Boolean;
 begin
   Result := SendLoop(sess, 'Reply — ' + contextLabel, 'reply', True, postId, parentReplyId);
+end;
+
+function ComposeGuildThread(sess: TCsSession; const guildSlug, guildLabel: string): Boolean;
+begin
+  Result := SendLoop(sess, 'New thread in ' + guildLabel + ' — as @' + sess.Username,
+    'guild_thread', False, '', '', guildSlug);
 end;
 
 end.

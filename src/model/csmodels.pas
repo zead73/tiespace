@@ -90,6 +90,31 @@ type
   end;
   TConversationArray = array of TConversation;
 
+  TGuild = record
+    Id: string;
+    Name: string;
+    Slug: string;
+    FounderId: string;
+    FounderUsername: string;
+    Icon: string;
+    Bio: string;
+    Link: string;
+    LinkText: string;
+    MemberCount: Integer;
+    CreatedAt: string;
+    IsMember: Boolean; // only set by Get Guild
+    Role: string;      // 'founder' | 'member' | '' (not a member / list view)
+  end;
+  TGuildArray = array of TGuild;
+
+  TGuildMember = record
+    Username: string;
+    DisplayName: string;
+    Role: string;
+    JoinedAt: string;
+  end;
+  TGuildMemberArray = array of TGuildMember;
+
 function ParseEntry(o: TJSONObject): TEntry;
 function ParseEntryArray(a: TJSONArray): TEntryArray;
 function ParseReply(o: TJSONObject): TReply;
@@ -106,6 +131,10 @@ function ParseChatMessage(o: TJSONObject): TChatMessage;
 function ParseChatMessageArray(a: TJSONArray): TChatMessageArray;
 function ParseConversation(o: TJSONObject): TConversation;
 function ParseConversationArray(a: TJSONArray): TConversationArray;
+function ParseGuild(o: TJSONObject): TGuild;
+function ParseGuildArray(a: TJSONArray): TGuildArray;
+function ParseGuildMember(o: TJSONObject): TGuildMember;
+function ParseGuildMemberArray(a: TJSONArray): TGuildMemberArray;
 
 { Format a millisecond epoch as local HH:MM. }
 function MsToLocalHM(ms: Int64): string;
@@ -426,6 +455,74 @@ begin
     if a.Items[i] is TJSONObject then
     begin
       Result[n] := ParseConversation(TJSONObject(a.Items[i]));
+      Inc(n);
+    end;
+  SetLength(Result, n);
+end;
+
+function ParseGuild(o: TJSONObject): TGuild;
+var
+  rd: TJSONData;
+begin
+  Result.Id := o.Get('id', '');
+  Result.Name := DecodeEntities(o.Get('name', ''));
+  Result.Slug := o.Get('slug', '');
+  Result.FounderId := o.Get('founderId', '');
+  Result.FounderUsername := o.Get('founderUsername', '');
+  Result.Icon := o.Get('icon', '');
+  Result.Bio := DecodeEntities(o.Get('bio', ''));
+  Result.Link := o.Get('link', '');
+  Result.LinkText := o.Get('linkText', '');
+  Result.MemberCount := o.Get('memberCount', 0);
+  Result.CreatedAt := o.Get('createdAt', '');
+  Result.IsMember := o.Get('isMember', False);
+  // role is null when the caller isn't a member -- read it defensively.
+  rd := o.Find('role');
+  if (rd <> nil) and (rd.JSONType = jtString) then
+    Result.Role := rd.AsString
+  else
+    Result.Role := '';
+end;
+
+function ParseGuildArray(a: TJSONArray): TGuildArray;
+var
+  i, n: Integer;
+begin
+  SetLength(Result, 0);
+  if a = nil then
+    Exit;
+  n := 0;
+  SetLength(Result, a.Count);
+  for i := 0 to a.Count - 1 do
+    if a.Items[i] is TJSONObject then
+    begin
+      Result[n] := ParseGuild(TJSONObject(a.Items[i]));
+      Inc(n);
+    end;
+  SetLength(Result, n);
+end;
+
+function ParseGuildMember(o: TJSONObject): TGuildMember;
+begin
+  Result.Username := o.Get('username', '');
+  Result.DisplayName := DecodeEntities(o.Get('displayName', ''));
+  Result.Role := o.Get('role', '');
+  Result.JoinedAt := o.Get('joinedAt', '');
+end;
+
+function ParseGuildMemberArray(a: TJSONArray): TGuildMemberArray;
+var
+  i, n: Integer;
+begin
+  SetLength(Result, 0);
+  if a = nil then
+    Exit;
+  n := 0;
+  SetLength(Result, a.Count);
+  for i := 0 to a.Count - 1 do
+    if a.Items[i] is TJSONObject then
+    begin
+      Result[n] := ParseGuildMember(TJSONObject(a.Items[i]));
       Inc(n);
     end;
   SetLength(Result, n);
