@@ -22,7 +22,8 @@ function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string)
 
 { Create a top-level entry (content only for now). Returns the new postId. }
 function CreateEntry(sess: TCsSession; const content: string;
-  out postId, err: string): Boolean;
+  out postId, err: string; const title: string = '';
+  const topics: string = ''): Boolean;
 { Create a reply to a post; pass parentReplyId to reply to a specific reply. }
 function CreateReply(sess: TCsSession; const postId, content: string;
   out replyId, err: string; const parentReplyId: string = ''): Boolean;
@@ -34,6 +35,9 @@ function DeleteReply(sess: TCsSession; const id: string; out err: string): Boole
 { Send a cIRC message (content may begin with / for a server-side command). }
 function SendChatMessage(sess: TCsSession; const roomId, content: string;
   out messageId, err: string): Boolean;
+{ Soft-delete your own cIRC message. }
+function DeleteChatMessage(sess: TCsSession; const roomId, messageId: string;
+  out err: string): Boolean;
 
 { Announce presence in a room (heartbeat). Returns the cadence to use. }
 function AnnouncePresence(sess: TCsSession; const roomId: string;
@@ -43,6 +47,12 @@ function LeavePresence(sess: TCsSession; const roomId: string; out err: string):
 
 { Follow a user by their userId. Returns the follow document id. }
 function FollowUser(sess: TCsSession; const followedId: string;
+  out followId, err: string): Boolean;
+{ Unfollow via the follow document id. }
+function UnfollowUser(sess: TCsSession; const followId: string; out err: string): Boolean;
+{ Look up whether you follow a user and, if so, the follow document id (needed to
+  unfollow). Pages through your following list. }
+function FindFollowing(sess: TCsSession; const followedUserId: string;
   out followId, err: string): Boolean;
 
 { Bookmark an entry; remove a bookmark by its document id. }
@@ -149,8 +159,42 @@ begin
   end;
 end;
 
+{ Parse a free-form "music, linux" / "#music #linux" string into up to 3
+  lowercased topics and attach them to the request body. }
+procedure AddTopics(body: TJSONObject; const s: string);
+var
+  arr: TJSONArray;
+  i: Integer;
+  tok: string;
+
+  procedure Flush;
+  begin
+    while (tok <> '') and (tok[1] = '#') do
+      Delete(tok, 1, 1);
+    tok := LowerCase(Trim(tok));
+    if (tok <> '') and (arr.Count < 3) then
+      arr.Add(tok);
+    tok := '';
+  end;
+
+begin
+  arr := TJSONArray.Create;
+  tok := '';
+  for i := 1 to Length(s) do
+    if s[i] in [' ', ',', #9] then
+      Flush
+    else
+      tok := tok + s[i];
+  Flush;
+  if arr.Count > 0 then
+    body.Add('topics', arr)
+  else
+    arr.Free;
+end;
+
 function CreateEntry(sess: TCsSession; const content: string;
-  out postId, err: string): Boolean;
+  out postId, err: string; const title: string = '';
+  const topics: string = ''): Boolean;
 var
   body, env, d: TJSONObject;
 begin
@@ -160,6 +204,10 @@ begin
   body := TJSONObject.Create;
   try
     body.Add('content', content);
+    if Trim(title) <> '' then
+      body.Add('title', Trim(title));
+    if Trim(topics) <> '' then
+      AddTopics(body, topics);
     try
       env := sess.Client.PostJSONObj('/v1/posts', body);
       try
@@ -271,6 +319,12 @@ begin
   end;
 end;
 
+function DeleteChatMessage(sess: TCsSession; const roomId, messageId: string;
+  out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/circ/' + roomId + '/messages/' + messageId, err);
+end;
+
 function AnnouncePresence(sess: TCsSession; const roomId: string;
   out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
 var
@@ -363,6 +417,69 @@ end;
 function RemoveBookmark(sess: TCsSession; const bookmarkId: string; out err: string): Boolean;
 begin
   Result := DeleteAt(sess, '/v1/bookmarks/' + bookmarkId, err);
+end;
+
+function UnfollowUser(sess: TCsSession; const followId: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/follows/' + followId, err);
+end;
+
+function FindFollowing(sess: TCsSession; const followedUserId: string;
+  out followId, err: string): Boolean;
+var
+  env: TJSONObject;
+  o: TJSONObject;
+  d, sub: TJSONData;
+  a: TJSONArray;
+  i, page: Integer;
+  cursor, path, fid, fuid: string;
+begin
+  Result := False;
+  followId := '';
+  err := '';
+  cursor := '';
+  page := 0;
+  try
+    repeat
+      path := '/v1/follows?type=following&limit=50';
+      if cursor <> '' then
+        path := path + '&cursor=' + cursor;
+      env := sess.Client.GetJSONObj(path);
+      try
+        d := env.Find('data');
+        if d is TJSONArray then
+        begin
+          a := TJSONArray(d);
+          for i := 0 to a.Count - 1 do
+            if a.Items[i] is TJSONObject then
+            begin
+              o := TJSONObject(a.Items[i]);
+              fid := o.Get('id', o.Get('followId', ''));
+              fuid := o.Get('followedId', o.Get('userId', ''));
+              if fuid = '' then
+              begin
+                sub := o.Find('followed');
+                if sub = nil then sub := o.Find('user');
+                if sub is TJSONObject then
+                  fuid := TJSONObject(sub).Get('userId', TJSONObject(sub).Get('id', ''));
+              end;
+              if fuid = followedUserId then
+              begin
+                followId := fid;
+                Exit(True);
+              end;
+            end;
+        end;
+        cursor := env.Get('cursor', '');
+      finally
+        env.Free;
+      end;
+      Inc(page);
+    until (cursor = '') or (page >= 10); // bound the scan
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
 end;
 
 function StartConversation(sess: TCsSession; const recipientUsername: string;

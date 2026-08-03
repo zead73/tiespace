@@ -83,6 +83,10 @@ procedure UIInputTimeout(ms: Integer);
 { A cautionary yes/no prompt shown in the status line. True = yes. }
 function UIConfirm(const question: string): Boolean;
 
+{ Single-line text prompt on the bottom row (editing, cursor, paste). Returns
+  True on Enter with `text` set, False on Esc. }
+function UIPromptLine(const prompt: string; out text: string): Boolean;
+
 { Leave/re-enter curses so an external full-screen program (e.g. an image
   viewer) can own the terminal, then repaint. UISuspend restores cooked mode;
   UIResume forces a full redraw on the next refresh. }
@@ -529,6 +533,104 @@ procedure UIInputTimeout(ms: Integer);
 begin
   FCurTimeout := ms;
   wtimeout(stdscr, ms);
+end;
+
+function SubFromCols(const s: string; startCol, widthCols: Integer): string;
+var
+  idx, col, w, ni: Integer;
+  chunk: string;
+begin
+  Result := '';
+  idx := 1;
+  col := 0;
+  while (idx <= Length(s)) and (col < startCol) do
+  begin
+    ni := NextCharBoundary(s, idx - 1) + 1;
+    Inc(col, VisibleWidth(Copy(s, idx, ni - idx)));
+    idx := ni;
+  end;
+  col := 0;
+  while idx <= Length(s) do
+  begin
+    ni := NextCharBoundary(s, idx - 1) + 1;
+    chunk := Copy(s, idx, ni - idx);
+    w := VisibleWidth(chunk);
+    if col + w > widthCols then
+      Break;
+    Result := Result + chunk;
+    Inc(col, w);
+    idx := ni;
+  end;
+end;
+
+function UIPromptLine(const prompt: string; out text: string): Boolean;
+var
+  cur, key, avail, promptW, curCol, startCol, p: Integer;
+  pv: string;
+begin
+  text := '';
+  cur := 0;
+  promptW := VisibleWidth(prompt) + 1;
+  repeat
+    DrawBar(ScreenRows - 1, cpText, '');
+    DrawText(ScreenRows - 1, 0, cpAccent, prompt, True);
+    avail := ScreenCols - promptW - 1;
+    if avail < 4 then
+      avail := 4;
+    curCol := VisibleWidth(Copy(text, 1, cur));
+    if VisibleWidth(text) <= avail then
+      startCol := 0
+    else
+    begin
+      startCol := curCol - avail;
+      if startCol < 0 then
+        startCol := 0;
+    end;
+    DrawText(ScreenRows - 1, promptW, cpText, SubFromCols(text, startCol, avail));
+    UICursorVisible(True);
+    UIPlaceCursor(ScreenRows - 1, promptW + (curCol - startCol));
+    UIRefresh;
+    key := UIGetKey;
+    case key of
+      27:
+        begin
+          UICursorVisible(False);
+          Exit(False);
+        end;
+      10, 13, KEY_ENTER:
+        begin
+          UICursorVisible(False);
+          Exit(True);
+        end;
+      KEY_BACKSPACE, 127, 8:
+        if cur > 0 then
+        begin
+          p := PrevCharBoundary(text, cur);
+          text := Copy(text, 1, p) + Copy(text, cur + 1, MaxInt);
+          cur := p;
+        end;
+      KEY_LEFT:
+        cur := PrevCharBoundary(text, cur);
+      KEY_RIGHT:
+        cur := NextCharBoundary(text, cur);
+      KEY_HOME:
+        cur := 0;
+      KEY_END:
+        cur := Length(text);
+      keyPaste:
+        begin
+          pv := PasteText(False);
+          text := Copy(text, 1, cur) + pv + Copy(text, cur + 1, MaxInt);
+          Inc(cur, Length(pv));
+        end;
+    else
+      if ((key >= 32) and (key <= 126)) or ((key >= 128) and (key <= 255)) then
+      begin
+        text := Copy(text, 1, cur) + Chr(key) + Copy(text, cur + 1, MaxInt);
+        Inc(cur);
+      end;
+    end;
+  until False;
 end;
 
 function UIConfirm(const question: string): Boolean;

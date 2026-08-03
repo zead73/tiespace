@@ -59,6 +59,7 @@ begin
     'follow': begin perMin := 3; perDay := 15; end;
     'note': begin perMin := 3; perDay := 30; end;
     'chat': begin perMin := 15; perDay := 300; end;
+    'chat_delete': begin perMin := 5; perDay := 30; end;
     'cmail': begin perMin := 15; perDay := 300; end;
     'cmail_start': begin perMin := 5; perDay := 50; end;
   else

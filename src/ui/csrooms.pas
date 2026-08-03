@@ -73,8 +73,10 @@ procedure RunRoom(sess: TCsSession; const room: TRoom);
 var
   msgs: TChatMessageArray;
   lines: TRenderLines;
+  lineMsg: array of Integer; // message index each line belongs to (-1 = none)
   err, roomId, streamUrl, inputBuf, presUrl: string;
-  top, visible, key, lastCols, inputCur: Integer;
+  top, visible, key, lastCols, inputCur, selMsg: Integer;
+  selMode: Boolean;
   stream: TChatStreamThread;
   presence: TPresenceThread;
   onlineNames: TNameArray;
@@ -210,8 +212,17 @@ var
     i, j, textW: Integer;
     header, content: string;
     wrapped: TTextLines;
+
+    procedure AddML(const text: string; pair: Integer; bold: Boolean; mi: Integer);
+    begin
+      RLAdd(lines, text, pair, bold);
+      SetLength(lineMsg, Length(lines));
+      lineMsg[High(lineMsg)] := mi;
+    end;
+
   begin
     SetLength(lines, 0);
+    SetLength(lineMsg, 0);
     if PanelW > 0 then
       textW := ScreenCols - PanelW - 3 // leave room for the separator + panel
     else
@@ -222,17 +233,17 @@ var
     for i := 0 to High(msgs) do
     begin
       if msgs[i].Deleted then
-        RLAdd(lines, MsToLocalHM(msgs[i].Timestamp) + '  @' + msgs[i].Username +
-          '  [deleted]', cpMeta)
+        AddML(MsToLocalHM(msgs[i].Timestamp) + '  @' + msgs[i].Username +
+          '  [deleted]', cpMeta, False, i)
       else if msgs[i].IsAction then
-        RLAdd(lines, MsToLocalHM(msgs[i].Timestamp) + '  * ' + msgs[i].Username +
-          ' ' + msgs[i].Content, cpMeta)
+        AddML(MsToLocalHM(msgs[i].Timestamp) + '  * ' + msgs[i].Username +
+          ' ' + msgs[i].Content, cpMeta, False, i)
       else
       begin
         header := MsToLocalHM(msgs[i].Timestamp) + '  @' + msgs[i].Username;
         if msgs[i].IsChatAdmin then
           header := header + ' (admin)';
-        RLAdd(lines, header, cpAccent, True);
+        AddML(header, cpAccent, True, i);
         content := msgs[i].Content;
         // An attachment with no caption sometimes repeats the URL as content.
         if (content = msgs[i].ImageUrl) or (content = msgs[i].GifUrl) then
@@ -241,17 +252,55 @@ var
         begin
           wrapped := WrapText(content, textW - 2);
           for j := 0 to High(wrapped) do
-            RLAdd(lines, '  ' + wrapped[j], cpText);
+            AddML('  ' + wrapped[j], cpText, False, i);
         end;
         if msgs[i].ImageUrl <> '' then
-          RLAdd(lines, '  🖼 [image]', cpMeta);
+          AddML('  🖼 [image]', cpMeta, False, i);
         if msgs[i].GifUrl <> '' then
-          RLAdd(lines, '  🖼 [gif]', cpMeta);
+          AddML('  🖼 [gif]', cpMeta, False, i);
       end;
     end;
 
     if Length(lines) = 0 then
-      RLAdd(lines, '(no messages yet)', cpMeta);
+      AddML('(no messages yet)', cpMeta, False, -1);
+  end;
+
+  function FirstLineOfMsg(mi: Integer): Integer;
+  var
+    i: Integer;
+  begin
+    Result := -1;
+    for i := 0 to High(lineMsg) do
+      if lineMsg[i] = mi then
+        Exit(i);
+  end;
+
+  function LastLineOfMsg(mi: Integer): Integer;
+  var
+    i: Integer;
+  begin
+    Result := -1;
+    for i := 0 to High(lineMsg) do
+      if lineMsg[i] = mi then
+        Result := i;
+  end;
+
+  procedure ScrollToMsg;
+  var
+    s, e2: Integer;
+  begin
+    s := FirstLineOfMsg(selMsg);
+    if s < 0 then
+      Exit;
+    e2 := LastLineOfMsg(selMsg);
+    if s < top then
+      top := s
+    else if e2 >= top + visible then
+      top := e2 - visible + 1;
+    if top > MaxTop then
+      top := MaxTop;
+    if top < 0 then
+      top := 0;
   end;
 
   function SubByCols(const s: string; startCol, widthCols: Integer): string;
@@ -318,7 +367,11 @@ var
     begin
       idx := top + i;
       if idx <= High(lines) then
+      begin
+        if selMode and (idx <= High(lineMsg)) and (lineMsg[idx] = selMsg) then
+          DrawText(1 + i, 0, cpAccent, '▎', True); // selected-message marker
         DrawText(1 + i, 1, lines[idx].Pair, lines[idx].Text, lines[idx].Bold);
+      end;
     end;
 
     // Right-side online panel.
@@ -337,8 +390,14 @@ var
       end;
     end;
 
-    // Bottom line: a transient error, or the input line.
-    if err <> '' then
+    // Bottom line: select-mode hint, a transient error, or the input line.
+    if selMode then
+    begin
+      UICursorVisible(False);
+      DrawBar(ScreenRows - 1, cpStatus,
+        ' SELECT · j/k pick · d delete own · Esc/Tab back to input');
+    end
+    else if err <> '' then
     begin
       UICursorVisible(False);
       DrawBar(ScreenRows - 1, cpError, ' ' + err);
@@ -347,7 +406,7 @@ var
     begin
       DrawBar(ScreenRows - 1, cpText, '');
       DrawText(ScreenRows - 1, 0, cpMeta,
-        '> type a message · Enter send · ↑/PgUp scroll · Esc leave');
+        '> type · Enter send · ↑/PgUp scroll · Tab select/delete · Esc leave');
       UICursorVisible(True);
       UIPlaceCursor(ScreenRows - 1, 2);
     end
@@ -438,6 +497,42 @@ var
       err := 'Send failed: ' + serr;
   end;
 
+  procedure DoDeleteMsg;
+  var
+    derr, lerr: string;
+  begin
+    if (selMsg < 0) or (selMsg > High(msgs)) then
+      Exit;
+    if msgs[selMsg].Username <> sess.Username then
+    begin
+      err := 'You can only delete your own messages.';
+      Exit;
+    end;
+    if msgs[selMsg].Deleted then
+    begin
+      err := 'Already deleted.';
+      Exit;
+    end;
+    if not Limiter.Check('chat_delete', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    if UIConfirm('Delete your message? This cannot be undone.') then
+    begin
+      if DeleteChatMessage(sess, roomId, msgs[selMsg].Id, derr) then
+      begin
+        Limiter.Note('chat_delete');
+        // The stream will also deliver the soft-delete; reflect it immediately.
+        msgs[selMsg].Deleted := True;
+        msgs[selMsg].Content := '[DELETED]';
+        BuildLines;
+      end
+      else
+        err := 'Delete failed: ' + derr;
+    end;
+  end;
+
   procedure Heartbeat;
   var
     e: string;
@@ -458,6 +553,8 @@ begin
   err := '';
   inputBuf := '';
   inputCur := 0;
+  selMode := False;
+  selMsg := -1;
   stream := nil;
   presence := nil;
   SetLength(onlineNames, 0);
@@ -509,39 +606,89 @@ begin
       key := UIGetKey;
       if (key <> -1) and (err <> '') then
         err := ''; // a real keypress dismisses a transient error
-      case key of
-        -1:
-          ; // input timeout: just loop to drain the stream
-        27:
-          Break; // Esc leaves the room
-        10, 13, KEY_ENTER:
-          DoSend;
-        KEY_BACKSPACE, 127, 8:
-          BackspaceInput;
-        KEY_LEFT:
-          inputCur := PrevCharBoundary(inputBuf, inputCur);
-        KEY_RIGHT:
-          inputCur := NextCharBoundary(inputBuf, inputCur);
-        KEY_HOME:
-          inputCur := 0;
-        KEY_END:
-          inputCur := Length(inputBuf);
-        KEY_UP:
-          ScrollUp(1);
-        KEY_DOWN:
-          ScrollDown(1);
-        KEY_PPAGE:
-          ScrollUp(visible);
-        KEY_NPAGE:
-          ScrollDown(visible);
-        keyPaste:
-          InsertInput(PasteText(False));
+      if selMode then
+      begin
+        // Select mode: pick a message to act on (delete your own).
+        case key of
+          -1: ;
+          27, 9, 10, 13, KEY_ENTER:
+            selMode := False; // Esc/Tab/Enter → back to typing
+          Ord('j'), KEY_DOWN:
+            if selMsg < High(msgs) then
+            begin
+              Inc(selMsg);
+              ScrollToMsg;
+            end;
+          Ord('k'), KEY_UP:
+            if selMsg > 0 then
+            begin
+              Dec(selMsg);
+              ScrollToMsg;
+            end;
+          Ord('g'):
+            begin
+              selMsg := 0;
+              ScrollToMsg;
+            end;
+          Ord('G'):
+            begin
+              selMsg := High(msgs);
+              ScrollToMsg;
+            end;
+          KEY_PPAGE:
+            ScrollUp(visible);
+          KEY_NPAGE:
+            ScrollDown(visible);
+          Ord('d'):
+            DoDeleteMsg;
+        end;
+        if selMsg > High(msgs) then
+          selMsg := High(msgs);
+        if selMsg < 0 then
+          selMsg := 0;
+      end
       else
-        if (key >= 32) and (key <= 126) then
-          InsertInput(Chr(key))
-        else if (key >= 128) and (key <= 255) then
-          InsertInput(Chr(key)); // raw byte of a multibyte paste
-      end;
+        // Input mode: type and send; Tab enters select mode.
+        case key of
+          -1:
+            ; // input timeout: just loop to drain the stream
+          27:
+            Break; // Esc leaves the room
+          9: // Tab → select mode (to delete a message)
+            if Length(msgs) > 0 then
+            begin
+              selMode := True;
+              selMsg := High(msgs);
+              ScrollToMsg;
+            end;
+          10, 13, KEY_ENTER:
+            DoSend;
+          KEY_BACKSPACE, 127, 8:
+            BackspaceInput;
+          KEY_LEFT:
+            inputCur := PrevCharBoundary(inputBuf, inputCur);
+          KEY_RIGHT:
+            inputCur := NextCharBoundary(inputBuf, inputCur);
+          KEY_HOME:
+            inputCur := 0;
+          KEY_END:
+            inputCur := Length(inputBuf);
+          KEY_UP:
+            ScrollUp(1);
+          KEY_DOWN:
+            ScrollDown(1);
+          KEY_PPAGE:
+            ScrollUp(visible);
+          KEY_NPAGE:
+            ScrollDown(visible);
+          keyPaste:
+            InsertInput(PasteText(False));
+        else
+          if (key >= 32) and (key <= 126) then
+            InsertInput(Chr(key))
+          else if (key >= 128) and (key <= 255) then
+            InsertInput(Chr(key)); // raw byte of a multibyte paste
+        end;
     until False;
   finally
     UICursorVisible(False);

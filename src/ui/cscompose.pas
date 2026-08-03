@@ -272,10 +272,12 @@ end;
 function SendLoop(sess: TCsSession; const header, action: string;
   isReply: Boolean; const postId, parentReplyId: string): Boolean;
 var
-  buffer, newId, err, msg: string;
+  buffer, newId, err, msg, title, topics: string;
 begin
   Result := False;
   buffer := '';
+  title := '';
+  topics := '';
   repeat
     if not EditText(header, buffer) then
       Exit(False); // Esc: cancelled
@@ -289,6 +291,14 @@ begin
       ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
       Continue;
     end;
+    // Entries can carry an optional title and up to 3 topics (Esc skips either).
+    if not isReply then
+    begin
+      if not UIPromptLine('Title (optional, Esc to skip):', title) then
+        title := '';
+      if not UIPromptLine('Topics (optional, space-separated):', topics) then
+        topics := '';
+    end;
     if not Limiter.Check(action, msg) then
     begin
       ShowMsg(msg);
@@ -299,7 +309,7 @@ begin
       if isReply then
         Result := CreateReply(sess, postId, buffer, newId, err, parentReplyId)
       else
-        Result := CreateEntry(sess, buffer, newId, err);
+        Result := CreateEntry(sess, buffer, newId, err, title, topics);
       if Result then
       begin
         Limiter.Note(action);

@@ -53,15 +53,15 @@ procedure RunProfile(sess: TCsSession; const username: string);
 var
   entries: TEntryArray;
   header: TRenderLines;
-  userId, displayName, bio, cursor, nextCursor, err, joined: string;
+  userId, displayName, bio, cursor, nextCursor, err, joined, followId: string;
   followers, following: Integer;
   sel, listTop, hdrH, listVisible, key: Integer;
-  loaded: Boolean;
+  loaded, iFollow: Boolean;
 
   procedure LoadProfile;
   var
     env, d: TJSONObject;
-    website, wname, wurl, loc: string;
+    website, wname, wurl, loc, fErr: string;
     wrapped: TTextLines;
     i, textW: Integer;
   begin
@@ -88,6 +88,12 @@ var
       on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
       on E: Exception do err := E.Message;
     end;
+
+    // Do we follow this user? (Needed to offer unfollow.) Skip for our own.
+    iFollow := False;
+    followId := '';
+    if loaded and (userId <> '') and (userId <> sess.UserId) then
+      iFollow := FindFollowing(sess, userId, followId, fErr);
 
     SetLength(header, 0);
     textW := ScreenCols - 2;
@@ -121,6 +127,13 @@ var
     end;
     if loc <> '' then
       RLAdd(header, '📍 ' + loc, cpMeta);
+    if (userId <> '') and (userId <> sess.UserId) then
+    begin
+      if iFollow then
+        RLAdd(header, '✓ following  (f to unfollow)', cpAccent)
+      else
+        RLAdd(header, 'not following  (f to follow)', cpMeta);
+    end;
     RLAdd(header, HLine(textW), cpMeta);
   end;
 
@@ -149,23 +162,50 @@ var
     end;
   end;
 
-  procedure DoFollow;
+  procedure DoFollowToggle;
   var
     fid, ferr, lerr: string;
   begin
     if userId = '' then
       Exit;
+    if userId = sess.UserId then
+    begin
+      err := 'That''s your own profile.';
+      Exit;
+    end;
     if not Limiter.Check('follow', lerr) then
     begin
       err := lerr;
       Exit;
     end;
-    if FollowUser(sess, userId, fid, ferr) then
+    if iFollow then
     begin
-      Limiter.Note('follow');
-      err := 'Now following @' + username;
+      if UnfollowUser(sess, followId, ferr) then
+      begin
+        Limiter.Note('follow');
+        iFollow := False;
+        followId := '';
+        err := 'Unfollowed @' + username;
+      end
+      else
+        err := 'Unfollow failed: ' + ferr;
     end
     else
+    begin
+      if FollowUser(sess, userId, fid, ferr) then
+      begin
+        Limiter.Note('follow');
+        iFollow := True;
+        followId := fid;
+        err := 'Now following @' + username;
+      end
+      else
+        err := 'Follow failed: ' + ferr;
+    end;
+    // Refresh header + follower count from the server, keeping our status line.
+    ferr := err;
+    LoadProfile;
+    if err = '' then
       err := ferr;
   end;
 
@@ -207,10 +247,16 @@ var
   procedure Redraw;
   var
     i, idx: Integer;
-    status: string;
+    fLabel: string;
   begin
     UIErase;
     DrawBar(0, cpHeader, ' profile   ·   @' + username);
+    if userId = sess.UserId then
+      fLabel := ''
+    else if iFollow then
+      fLabel := ' · f unfollow'
+    else
+      fLabel := ' · f follow';
 
     hdrH := Length(header);
     if hdrH > ScreenRows - 4 then
@@ -244,11 +290,11 @@ var
     if err <> '' then
       DrawBar(ScreenRows - 1, cpError, ' ' + err)
     else if Length(entries) = 0 then
-      DrawBar(ScreenRows - 1, cpStatus, ' no entries   ·   f follow · r reload · q back')
+      DrawBar(ScreenRows - 1, cpStatus, ' no entries' + fLabel + ' · r reload · q back')
     else
       DrawBar(ScreenRows - 1, cpStatus,
-        Format(' %d/%d entries   ·   j/k · Enter open · f follow · r reload · q back',
-        [sel + 1, Length(entries)]));
+        Format(' %d/%d entries   ·   j/k · Enter open%s · r reload · q back',
+        [sel + 1, Length(entries), fLabel]));
     UIRefresh;
   end;
 
@@ -293,7 +339,7 @@ begin
           sel := High(entries);
         end;
       Ord('f'):
-        DoFollow;
+        DoFollowToggle;
       Ord('r'):
         begin
           err := '';
