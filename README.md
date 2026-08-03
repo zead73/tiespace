@@ -173,7 +173,8 @@ program cyberspace           entry: cthreads first, event loop
 - **M3** — real-time: RTDB SSE manager; cIRC rooms and C-Mail DMs (live +
   presence + typing)
 - **M4** — polish: notes, settings, watches, richer markdown, slash-command
-  help, NSFW handling, theming/keybindings
+  help, NSFW handling, theming/keybindings — tracked as a checklist in
+  [TODO.md](TODO.md)
 
 ## Layout
 
