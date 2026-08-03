@@ -188,7 +188,7 @@ var
     UIErase;
     if unread > 0 then
       DrawBar(0, cpHeader, ' tiespace   ·   feed   ·   @' + sess.Username +
-        '   ·   ' + IntToStr(unread) + ' unread')
+        '   ·   ' + IntToStr(unread) + ' unread notifs (n)')
     else
       DrawBar(0, cpHeader, ' tiespace   ·   feed   ·   @' + sess.Username);
 
