@@ -18,7 +18,8 @@ procedure RunRooms(sess: TCsSession);
 implementation
 
 uses
-  SysUtils, DateUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsSSE, CsApi, CsRateLimit;
+  SysUtils, DateUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsSSE, CsApi,
+  CsRateLimit, CsImage;
 
 function FetchRooms(sess: TCsSession; out err: string): TRoomArray;
 var
@@ -395,7 +396,7 @@ var
     begin
       UICursorVisible(False);
       DrawBar(ScreenRows - 1, cpStatus,
-        ' SELECT · j/k pick · d delete own · Esc/Tab back to input');
+        ' SELECT · j/k pick · i view image · d delete own · Esc/Tab back to input');
     end
     else if err <> '' then
     begin
@@ -533,6 +534,34 @@ var
     end;
   end;
 
+  procedure ViewSelImage;
+  var
+    imgs: TImageRefs;
+  begin
+    if (selMsg < 0) or (selMsg > High(msgs)) then
+      Exit;
+    SetLength(imgs, 0);
+    if msgs[selMsg].ImageUrl <> '' then
+    begin
+      SetLength(imgs, Length(imgs) + 1);
+      imgs[High(imgs)].Alt := '@' + msgs[selMsg].Username;
+      imgs[High(imgs)].Url := msgs[selMsg].ImageUrl;
+    end;
+    if msgs[selMsg].GifUrl <> '' then
+    begin
+      SetLength(imgs, Length(imgs) + 1);
+      imgs[High(imgs)].Alt := '@' + msgs[selMsg].Username + ' (gif)';
+      imgs[High(imgs)].Url := msgs[selMsg].GifUrl;
+    end;
+    if Length(imgs) = 0 then
+    begin
+      err := 'That message has no image.';
+      Exit;
+    end;
+    ViewImages(imgs); // suspends the TUI, shells out to chafa, restores
+    UIInputTimeout(300); // restore timed input for the live stream
+  end;
+
   procedure Heartbeat;
   var
     e: string;
@@ -639,6 +668,8 @@ begin
             ScrollUp(visible);
           KEY_NPAGE:
             ScrollDown(visible);
+          Ord('i'):
+            ViewSelImage;
           Ord('d'):
             DoDeleteMsg;
         end;
