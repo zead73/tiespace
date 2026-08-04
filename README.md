@@ -51,7 +51,8 @@ NSFW blur/filter, theming/keybindings.
 Requires: `fpc` 3.2.2, system OpenSSL 3, and wide ncurses (`ncursesw`).
 
 ```bash
-make app       # builds bin/cyberspace (the client)
+make           # builds the client and runs the tests (app + test)
+make app       # just the client -> bin/cyberspace
 make test      # builds + runs the pure-function unit tests
 make spike     # bin/spike_login   (M0 transport check)
 make session   # bin/session_test  (session/refresh harness)

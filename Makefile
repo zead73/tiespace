@@ -16,7 +16,7 @@ BIN    = bin
 
 .PHONY: all app spike session test clean dirs
 
-all: app
+all: app test
 
 app: dirs
 	$(FPC) $(FLAGS) -o$(BIN)/cyberspace src/cyberspace.pas
