@@ -37,6 +37,7 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
 
 ## Client-side polish (no new API — just UI/rendering)
 
+- [ ] **Add colours to the new help screen** — colorize borders, section headers, and key shortcuts for better visual separation
 - [ ] **Read-side NSFW handling** — blur/gate/collapse NSFW entries in the feed and
       threads (we already set the flag on compose and show a `[NSFW]` label); honor the
       `filterNSFW` setting once Settings lands

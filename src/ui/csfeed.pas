@@ -137,37 +137,48 @@ var
     end;
   end;
 
-  procedure ShowHelp;
-  const
-    h: array[0..17] of string = (
-      'tiespace — feed keys',
-      '',
-      '  j / k, ↑ / ↓      move          Enter   open thread',
-      '  Home / G          top / bottom  PgUp/Dn page',
-      '  g                 guilds        p       author profile',
-      '  c                 new entry     d       delete own entry',
-      '  b                 bookmark      B       bookmarks list',
-      '  /                 search        t       topics',
-      '  n                 notifications N       notes (private)',
-      '  C                 cIRC chat     M       C-Mail (direct msgs)',
-      '  r                 reload        Q       log out',
-      '  q                 quit',
-      '',
-      'In a guild: Enter thread · c new · m members · J/L join/leave',
-      'In notes: Enter read · c new · e edit · v revisions · d delete',
-      'In a thread: c reply · i images · d delete · q back',
-      'In chat/mail: type + Enter send · ↑/PgUp scroll · Esc back',
-      'Press any key to close');
-    var i: Integer;
-  begin
-    UIErase;
-    DrawBar(0, cpHeader, ' tiespace   ·   help');
-    for i := 0 to High(h) do
-      if 2 + i <= ScreenRows - 1 then
-        DrawText(2 + i, 2, cpText, h[i]);
-    UIRefresh;
-    UIGetKey;
-  end;
+procedure ShowHelp;
+const
+  h: array[0..19] of string = (
+    '+----------------------------------------------------------------------+',
+    '|                        TIESPACE - KEYBINDINGS                        |',
+    '+----------------------------------+-----------------------------------+',
+    '| NAVIGATION & VIEWS               | ACTIONS & CONTROLS                |',
+    '|   g        Guilds                |   j / k, Up/Dn   Move up / down   |',
+    '|   t        Topics                |   Home / G       Top / Bottom     |',
+    '|   b / B    Bookmark / List       |   PgUp / PgDn    Page up / down   |',
+    '|   n / N    Notify / Notes        |   Enter          Open / Select    |',
+    '|   C        cIRC Chat             |   c              New entry / Post |',
+    '|   M        C-Mail (Direct)       |   d              Delete own entry |',
+    '|   p        Author Profile        |   /              Search           |',
+    '|   r        Reload screen         |   q / Q          Quit / Log out   |',
+    '+----------------------------------+-----------------------------------+',
+    '| CONTEXT SHORTCUTS                                                    |',
+    '|   In Guild     [Enter] Thread [c] New  [m] Members [J/L] Join/Leave  |',
+    '|   In Notes     [Enter] Read   [c] New  [e] Edit    [v] Revisions     |',
+    '|   In Notes     [d] Delete                                            |',
+    '|   In Thread    [c] Reply      [i] Images [d] Delete [q] Back         |',
+    '|   In Chat/Mail [Type+Enter] Send [Up/PgUp] Scroll  [Esc] Back        |',
+    '+----------------------------------------------------------------------+'
+  );
+var i, closeRow: Integer;
+begin
+  UIErase;
+  DrawBar(0, cpHeader, ' tiespace - help');
+
+  for i := 0 to High(h) do
+    if 2 + i <= ScreenRows - 1 then
+      DrawText(2 + i, 2, cpText, h[i]);
+
+  // Sits just below the box, centred under it; clamped so it stays on screen.
+  closeRow := 2 + Length(h);
+  if closeRow > ScreenRows - 1 then
+    closeRow := ScreenRows - 1;
+  DrawText(closeRow, 25, cpText, '[ Press any key to close ]');
+
+  UIRefresh;
+  UIGetKey;
+end;
 
   procedure Redraw;
   var
