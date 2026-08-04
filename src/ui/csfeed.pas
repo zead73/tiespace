@@ -161,20 +161,97 @@ const
     '|   In Chat/Mail [Type+Enter] Send [Up/PgUp] Scroll  [Esc] Back        |',
     '+----------------------------------------------------------------------+'
   );
-var i, closeRow: Integer;
+var
+  i, closeRow: Integer;
+
+  { Draw a run of line `s` (0-based col `cidx`, length `clen`) in a colour,
+    at its original screen column so the box alignment is preserved. }
+  procedure Seg(row: Integer; const s: string; cidx, clen, pair: Integer; bold: Boolean);
+  begin
+    if clen > 0 then
+      DrawText(row, 2 + cidx, pair, Copy(s, cidx + 1, clen), bold);
+  end;
+
+  { A two-column cell: bold-highlight the leading key token (the run up to the
+    first 2+ space gap), then draw its description in the default colour. }
+  procedure DrawCell(row: Integer; const s: string; cidx, cw: Integer);
+  var
+    cell: string;
+    keyStart, keyEnd, descStart: Integer;
+  begin
+    cell := Copy(s, cidx + 1, cw);
+    keyStart := 0;
+    while (keyStart < Length(cell)) and (cell[keyStart + 1] = ' ') do
+      Inc(keyStart);
+    if keyStart >= Length(cell) then
+      Exit; // empty cell
+    keyEnd := keyStart;
+    while (keyEnd < Length(cell)) and
+          not ((cell[keyEnd + 1] = ' ') and (keyEnd + 2 <= Length(cell)) and
+               (cell[keyEnd + 2] = ' ')) do
+      Inc(keyEnd);
+    Seg(row, s, cidx + keyStart, keyEnd - keyStart, cpMeta, True); // key
+    descStart := keyEnd;
+    while (descStart < Length(cell)) and (cell[descStart + 1] = ' ') do
+      Inc(descStart);
+    if descStart < Length(cell) then
+      Seg(row, s, cidx + descStart, Length(cell) - descStart, cpText, False); // desc
+  end;
+
+  { A context row: plain text with any [bracketed] keys bold-highlighted. }
+  procedure DrawContext(row: Integer; const s: string);
+  var
+    p, e: Integer;
+  begin
+    Seg(row, s, 1, 70, cpText, False);
+    p := 2;
+    while p <= 71 do
+    begin
+      if s[p] = '[' then
+      begin
+        e := p;
+        while (e <= 71) and (s[e] <> ']') do
+          Inc(e);
+        if e <= 71 then
+        begin
+          Seg(row, s, p - 1, e - p + 1, cpMeta, True);
+          p := e + 1;
+          Continue;
+        end;
+      end;
+      Inc(p);
+    end;
+  end;
+
 begin
   UIErase;
   DrawBar(0, cpHeader, ' tiespace - help');
 
   for i := 0 to High(h) do
-    if 2 + i <= ScreenRows - 1 then
-      DrawText(2 + i, 2, cpText, h[i]);
+  begin
+    if 2 + i > ScreenRows - 1 then
+      Break;
+    DrawText(2 + i, 2, cpAccent, h[i]); // frame first (cyan borders/dividers)
+    case i of                           // then overlay content by row kind
+      1:      Seg(2 + i, h[i], 1, 70, cpHeader, True);   // title band
+      3:      begin                                       // section headers
+                Seg(2 + i, h[i], 1, 34, cpAccent, True);
+                Seg(2 + i, h[i], 36, 35, cpAccent, True);
+              end;
+      4..11:  begin                                       // two key columns
+                DrawCell(2 + i, h[i], 1, 34);
+                DrawCell(2 + i, h[i], 36, 35);
+              end;
+      13:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
+      14..18: DrawContext(2 + i, h[i]);                    // context rows
+    end;                                                   // 0/2/12/19: borders
+  end;
 
   // Sits just below the box, centred under it; clamped so it stays on screen.
   closeRow := 2 + Length(h);
   if closeRow > ScreenRows - 1 then
     closeRow := ScreenRows - 1;
-  DrawText(closeRow, 25, cpText, '[ Press any key to close ]');
+  DrawText(closeRow, 25, cpMeta, '[ Press any key to close ]', True);
 
   UIRefresh;
   UIGetKey;
