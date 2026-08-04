@@ -52,14 +52,20 @@ Requires: `fpc` 3.2.2, system OpenSSL 3, and wide ncurses (`ncursesw`).
 
 ```bash
 make app       # builds bin/cyberspace (the client)
+make test      # builds + runs the pure-function unit tests
 make spike     # bin/spike_login   (M0 transport check)
 make session   # bin/session_test  (session/refresh harness)
 ```
 
 Run `./bin/cyberspace` after logging in once (see below).
 
-The `crtbeginS.o` / `crtendS.o` linker warnings from FPC on Arch are harmless;
-the binary links and runs.
+`make test` runs a no-network, no-terminal suite over the parsers, HTML-entity
+decoding, the rate limiter, and the wcwidth/UTF-8 layout helpers; it exits
+non-zero if anything fails. Needs a UTF-8 locale (as the client itself does).
+
+If FPC can't locate gcc's C-runtime directory it emits harmless `crtbeginS.o` /
+`crtendS.o` linker warnings; the Makefile normally finds it and suppresses them,
+and either way the binary links and runs.
 
 ## Platforms
 

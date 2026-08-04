@@ -14,7 +14,7 @@ FLAGS  = -Mobjfpc -Sh -O2 -vw -vm5093,6058 \
          $(if $(CRTDIR),-Fl$(CRTDIR))
 BIN    = bin
 
-.PHONY: all app spike session clean dirs
+.PHONY: all app spike session test clean dirs
 
 all: app
 
@@ -26,6 +26,12 @@ spike: dirs
 
 session: dirs
 	$(FPC) $(FLAGS) -o$(BIN)/session_test src/spikes/session_test.pas
+
+# Pure-function unit tests (no network, no terminal). Builds and runs them;
+# the binary exits non-zero if any assertion fails, so this fails the build too.
+test: dirs
+	$(FPC) $(FLAGS) -o$(BIN)/testsuite tests/testsuite.pas
+	./$(BIN)/testsuite
 
 dirs:
 	@mkdir -p $(BIN) build
