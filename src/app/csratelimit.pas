@@ -65,6 +65,7 @@ begin
     'guild_thread': begin perMin := 2; perDay := 15; end;
     'guild_join': begin perMin := 3; perDay := 15; end;
     'guild_leave': begin perMin := 3; perDay := 15; end;
+    'watch': begin perMin := 10; perDay := 100; end;
   else
     Result := False; // no known rule -> unlimited client-side
   end;

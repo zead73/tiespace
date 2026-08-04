@@ -21,7 +21,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
 - thread view: **selectable** entry + replies; `c` reply (to the entry or to a
   specific reply, nested); `d` delete your own entry or reply; `p` author
-  profile; `i` view post images (shells out to `chafa`)
+  profile; `i` view post images (shells out to `chafa`); `w` watch/unwatch the
+  thread (a 👁 marks a watched thread)
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
@@ -34,6 +35,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
   thread, `m` list members, `J`/`L` join / leave (one guild at a time)
 - notes (`N`): private, revisioned notes — `c` new, `e` edit (saves a new
   revision), `v` browse revision history, `d` delete
+- watched threads (`W`): the threads you watch for replies; Enter opens one,
+  `x` unwatches (watch/unwatch from inside a thread with `w`)
 
 **Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
@@ -43,8 +46,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the remaining M4 polish items — watches, settings, read-side
-NSFW blur/filter, theming/keybindings.
+**Not yet built**: the remaining M4 polish items — settings, read-side NSFW
+blur/filter, theming/keybindings.
 
 ## Build
 

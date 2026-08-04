@@ -20,7 +20,8 @@ function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsApi, CsCompose, CsImage, CsProfile;
+  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsApi, CsRateLimit, CsCompose,
+  CsImage, CsProfile;
 
 const
   PAGE = 50;
@@ -64,6 +65,7 @@ var
   lineOwner: array of Integer; // -2 non-selectable, -1 entry, k = reply k
   images: TImageRefs;
   top, visible, key, lastCols, selReply: Integer;
+  watching: Boolean;
 
   function MaxTop: Integer;
   begin
@@ -224,6 +226,36 @@ var
       top := 0;
   end;
 
+  { Toggle watching this thread. The header/status flip is the success feedback;
+    only failures and rate-limit blocks surface a (red) message. }
+  procedure DoWatchToggle;
+  var
+    lerr, terr: string;
+  begin
+    if not Limiter.Check('watch', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    if watching then
+    begin
+      if UnwatchThread(sess, entry.PostId, terr) then
+      begin
+        Limiter.Note('watch');
+        watching := False;
+      end
+      else
+        err := 'Unwatch failed: ' + terr;
+    end
+    else if WatchThread(sess, entry.PostId, terr) then
+    begin
+      Limiter.Note('watch');
+      watching := True;
+    end
+    else
+      err := 'Watch failed: ' + terr;
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
@@ -242,8 +274,12 @@ var
       top := 0;
 
     UIErase;
-    DrawBar(0, cpHeader, ' thread   ·   @' + entry.AuthorUsername + '   ·   ' +
-      EntrySummary(entry));
+    if watching then
+      DrawBar(0, cpHeader, ' thread 👁 watching   ·   @' + entry.AuthorUsername +
+        '   ·   ' + EntrySummary(entry))
+    else
+      DrawBar(0, cpHeader, ' thread   ·   @' + entry.AuthorUsername + '   ·   ' +
+        EntrySummary(entry));
 
     for i := 0 to visible - 1 do
     begin
@@ -265,6 +301,10 @@ var
       else
         selDesc := 'reply @' + replies[selReply].AuthorUsername;
       status := ' ' + selDesc + '   ·   j/k select · c reply · p profile';
+      if watching then
+        status := status + ' · w unwatch'
+      else
+        status := status + ' · w watch';
       if SelAuthor = sess.Username then
         status := status + ' · d delete';
       if Length(images) > 0 then
@@ -285,6 +325,7 @@ begin
   BuildLines;
   top := 0;
   lastCols := ScreenCols;
+  FetchWatchStatus(sess, entry.PostId, watching, derr); // derr ignored: defaults to not-watching
   repeat
     if ScreenCols <> lastCols then
     begin
@@ -335,6 +376,8 @@ begin
           err := 'No images in this thread.';
       Ord('p'):
         RunProfile(sess, SelAuthor);
+      Ord('w'):
+        DoWatchToggle;
       Ord('c'):
         begin
           if selReply = -1 then

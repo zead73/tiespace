@@ -93,6 +93,14 @@ function UpdateNote(sess: TCsSession; const noteId, content, topics: string;
   out err: string): Boolean;
 function DeleteNote(sess: TCsSession; const id: string; out err: string): Boolean;
 
+{ Thread watching: whether you watch a thread, and watch/unwatch it (you get
+  thread_reply notifications while watching). The watched list is read inline by
+  the view. }
+function FetchWatchStatus(sess: TCsSession; const postId: string;
+  out watching: Boolean; out err: string): Boolean;
+function WatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
+function UnwatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
+
 implementation
 
 uses
@@ -794,6 +802,39 @@ end;
 function DeleteNote(sess: TCsSession; const id: string; out err: string): Boolean;
 begin
   Result := DeleteAt(sess, '/v1/notes/' + id, err);
+end;
+
+function FetchWatchStatus(sess: TCsSession; const postId: string;
+  out watching: Boolean; out err: string): Boolean;
+var
+  env, d: TJSONObject;
+begin
+  Result := False;
+  watching := False;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj('/v1/posts/' + postId + '/watch');
+    try
+      d := CsData(env);
+      watching := d.Get('watching', False);
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function WatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
+begin
+  Result := PostNoBody(sess, '/v1/posts/' + postId + '/watch', err);
+end;
+
+function UnwatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
+begin
+  Result := DeleteAt(sess, '/v1/posts/' + postId + '/watch', err);
 end;
 
 end.

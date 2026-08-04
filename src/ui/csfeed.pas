@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsNotes, CsRateLimit;
+  CsNotes, CsWatches, CsRateLimit;
 
 const
   PAGE = 25;
@@ -139,7 +139,7 @@ var
 
 procedure ShowHelp;
 const
-  h: array[0..19] of string = (
+  h: array[0..20] of string = (
     '+----------------------------------------------------------------------+',
     '|                        TIESPACE - KEYBINDINGS                        |',
     '+----------------------------------+-----------------------------------+',
@@ -152,12 +152,13 @@ const
     '|   M        C-Mail (Direct)       |   d              Delete own entry |',
     '|   p        Author Profile        |   /              Search           |',
     '|   r        Reload screen         |   q / Q          Quit / Log out   |',
+    '|   W        Watches               |   ?              This help        |',
     '+----------------------------------+-----------------------------------+',
     '| CONTEXT SHORTCUTS                                                    |',
     '|   In Guild     [Enter] Thread [c] New  [m] Members [J/L] Join/Leave  |',
     '|   In Notes     [Enter] Read   [c] New  [e] Edit    [v] Revisions     |',
     '|   In Notes     [d] Delete                                            |',
-    '|   In Thread    [c] Reply      [i] Images [d] Delete [q] Back         |',
+    '|   In Thread    [c] Reply [i] Images [d] Delete [w] Watch [q] Back    |',
     '|   In Chat/Mail [Type+Enter] Send [Up/PgUp] Scroll  [Esc] Back        |',
     '+----------------------------------------------------------------------+'
   );
@@ -238,13 +239,13 @@ begin
                 Seg(2 + i, h[i], 1, 34, cpAccent, True);
                 Seg(2 + i, h[i], 36, 35, cpAccent, True);
               end;
-      4..11:  begin                                       // two key columns
+      4..12:  begin                                       // two key columns
                 DrawCell(2 + i, h[i], 1, 34);
                 DrawCell(2 + i, h[i], 36, 35);
               end;
-      13:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
-      14..18: DrawContext(2 + i, h[i]);                    // context rows
-    end;                                                   // 0/2/12/19: borders
+      14:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
+      15..19: DrawContext(2 + i, h[i]);                    // context rows
+    end;                                                   // 0/2/13/20: borders
   end;
 
   // Sits just below the box, centred under it; clamped so it stays on screen.
@@ -407,6 +408,11 @@ begin
       Ord('N'):
         begin
           RunNotes(sess);
+          err := '';
+        end;
+      Ord('W'):
+        begin
+          RunWatches(sess);
           err := '';
         end;
       Ord('p'):

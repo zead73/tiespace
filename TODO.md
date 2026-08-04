@@ -17,13 +17,14 @@ Private to you; editing creates a new revision rather than overwriting.
 - [x] rate rule — reused existing `note` (3/min, 30/day)
 - [x] README + this checklist
 
-### Thread watching — `thread_reply` notifications for threads you follow
+### Thread watching — `thread_reply` notifications for threads you follow ✅ done
 Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
-- [ ] `csapi`: watch status (`GET /v1/posts/:id/watch`), watch (`POST`), unwatch (`DELETE`), list (`GET /v1/watches`)
-- [ ] thread view: `w` watch/unwatch toggle + a watched/unwatched indicator
-- [ ] watched-threads list view (open a thread from it)
-- [ ] rate rule: `watch` = 10/min, 100/day
-- [ ] README + this checklist
+- [x] `csapi`: FetchWatchStatus (`GET /v1/posts/:id/watch`), WatchThread (`POST`), UnwatchThread (`DELETE`); list read inline by the view (`GET /v1/watches`)
+- [x] thread view: `w` toggle + a `👁 watching` header indicator
+- [x] watched-threads list view (`ui/cswatches.pas`, feed key `W`): rows resolve
+      postId → "@author · summary" lazily; Enter opens, `x` unwatches
+- [x] rate rule: `watch` = 10/min, 100/day
+- [x] README + this checklist
 
 ### Settings — read/write account preferences
 `GET` / `PATCH /v1/settings`.
