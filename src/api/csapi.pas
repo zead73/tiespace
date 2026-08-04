@@ -101,6 +101,10 @@ function FetchWatchStatus(sess: TCsSession; const postId: string;
 function WatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
 function UnwatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
 
+{ Load read-side preferences (currently just filterNSFW) into the session.
+  Best-effort: leaves the session default on any error. }
+procedure RefreshPrefs(sess: TCsSession);
+
 implementation
 
 uses
@@ -835,6 +839,24 @@ end;
 function UnwatchThread(sess: TCsSession; const postId: string; out err: string): Boolean;
 begin
   Result := DeleteAt(sess, '/v1/posts/' + postId + '/watch', err);
+end;
+
+procedure RefreshPrefs(sess: TCsSession);
+var
+  env, d: TJSONObject;
+begin
+  try
+    env := sess.Client.GetJSONObj('/v1/settings');
+    try
+      d := CsData(env);
+      sess.FilterNSFW := d.Get('filterNSFW', False);
+    finally
+      env.Free;
+    end;
+  except
+    on E: Exception do
+      ; // best effort — keep the current value
+  end;
 end;
 
 end.

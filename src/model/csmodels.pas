@@ -158,6 +158,10 @@ function RelativeTimeMs(ms: Int64): string;
   of the content. }
 function EntrySummary(const e: TEntry): string;
 
+{ Feed/list summary with NSFW read-side handling: masked to "[NSFW hidden]" when
+  filtering is on, else prefixed "[NSFW] "; plain otherwise. }
+function FeedSummary(const e: TEntry; filterNSFW: Boolean): string;
+
 { "now", "5m", "3h", "2d", "6w", else an ISO date. Best-effort. }
 function RelativeTime(const isoUtc: string): string;
 
@@ -632,6 +636,15 @@ begin
   if Trim(s) = '' then
     Exit('(no title)');
   Result := Trim(s);
+end;
+
+function FeedSummary(const e: TEntry; filterNSFW: Boolean): string;
+begin
+  if e.IsNSFW and filterNSFW then
+    Exit('[NSFW hidden]');
+  Result := EntrySummary(e);
+  if e.IsNSFW then
+    Result := '[NSFW] ' + Result;
 end;
 
 function ParseIsoUtc(const s: string; out dt: TDateTime): Boolean;

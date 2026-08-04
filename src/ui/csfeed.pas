@@ -106,9 +106,7 @@ var
     if e.RepliesCount > 0 then
       right := IntToStr(e.RepliesCount) + '↩  ';
     right := right + RelativeTime(e.CreatedAt);
-    summary := EntrySummary(e);
-    if e.IsNSFW then
-      summary := '[NSFW] ' + summary;
+    summary := FeedSummary(e, sess.FilterNSFW);
 
     rightW := VisibleWidth(right);
     authorX := 2;
@@ -313,6 +311,7 @@ end;
 begin
   Result := False;
   err := '';
+  RefreshPrefs(sess); // load filterNSFW for read-side NSFW masking
   LoadFirst;
   repeat
     Redraw;

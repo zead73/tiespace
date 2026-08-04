@@ -40,17 +40,20 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - settings (`S`): toggle account preferences — NSFW filter, auto-watch on
   reply, per-type notifications, feed/display switches; `Space` toggles, `s`
   saves all changes in one request
+- NSFW filtering: with **Filter NSFW** on (Settings), NSFW posts read as
+  `[NSFW hidden]` in every list, and an NSFW thread's title/body/images stay
+  hidden until you reveal them (`x`, per thread)
 
 **Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
-  send + IRC slash-commands, scrollback, live online-users panel + presence
-  heartbeat; in select mode (`Tab`), `d` deletes your own message and `i` views
-  a message's image
+  send + IRC slash-commands (`/help` shows the command reference), scrollback,
+  live online-users panel + presence heartbeat; in select mode (`Tab`), `d`
+  deletes your own message and `i` views a message's image
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the remaining M4 polish items — read-side NSFW blur/filter,
-richer markdown, slash-command help, theming/keybindings.
+**Not yet built**: the remaining M4 polish items — richer markdown in thread
+bodies, theming, remappable keybindings.
 
 ## Build
 

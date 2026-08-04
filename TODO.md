@@ -44,13 +44,15 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
 ## Client-side polish (no new API — just UI/rendering)
 
 - [x] **Add colours to the new help screen** — cyan frame, bold-cyan section headers, bold-yellow key shortcuts, blue title band, highlighted `[bracketed]` context keys
-- [ ] **Read-side NSFW handling** — blur/gate/collapse NSFW entries in the feed and
-      threads (we already set the flag on compose and show a `[NSFW]` label); honor the
-      `filterNSFW` setting once Settings lands
+- [x] **Read-side NSFW handling** — honours the `filterNSFW` setting (loaded into the
+      session, kept in sync when Settings saves). Centralised `FeedSummary` masks NSFW
+      rows to `[NSFW hidden]` across feed/profile/topics/guilds; the thread view gates an
+      NSFW entry's title/body/images behind `x` reveal (and blocks `i` until revealed).
 - [ ] **Richer markdown rendering** — inline bold/italic/headings/lists/links in thread
       bodies (today content is entity-decoded and lightly cleaned for summaries only)
-- [ ] **Slash-command help** — an in-client reference for cIRC slash-commands
-      (sourced from the API `/commands` section); commands already pass through to the server
+- [x] **Slash-command help** — `/help` (or `/commands`, `/?`) in a cIRC room opens a
+      scrollable static reference of the slash commands (intercepted client-side, posts
+      nothing); status line hints `/help cmds`
 - [ ] **Theming** — selectable colour themes; can persist server-side via `iconTheme`/Settings
 - [ ] **Keybindings** — remappable keys; can persist via `keyboardBindings`/`keyboardPreset`/Settings
 

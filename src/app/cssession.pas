@@ -25,6 +25,7 @@ type
     FRtdbUrl: string;
     FUsername: string;
     FUserId: string;
+    FFilterNSFW: Boolean; // read-side pref, loaded from /v1/settings
     procedure IdentifyFromMe;
     procedure PersistSession;
   public
@@ -46,6 +47,9 @@ type
     property RtdbUrl: string read FRtdbUrl;
     property Username: string read FUsername;
     property UserId: string read FUserId;
+    { Whether to filter/mask NSFW content in read views. Loaded from settings at
+      feed start and updated when the settings screen saves it. }
+    property FilterNSFW: Boolean read FFilterNSFW write FFilterNSFW;
   end;
 
 implementation

@@ -161,7 +161,11 @@ var
         env.Free;
         Limiter.Note('settings');
         for i := 0 to High(items) do
+        begin
+          if items[i].Key = 'filterNSFW' then
+            sess.FilterNSFW := items[i].Value; // keep read-side masking in sync
           items[i].Dirty := False;
+        end;
         flash := 'Saved. ✓';
         flashErr := False;
       except

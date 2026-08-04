@@ -65,7 +65,13 @@ var
   lineOwner: array of Integer; // -2 non-selectable, -1 entry, k = reply k
   images: TImageRefs;
   top, visible, key, lastCols, selReply: Integer;
-  watching: Boolean;
+  watching, revealed: Boolean;
+
+  { An NSFW entry whose content is currently masked (filtering on, not revealed). }
+  function Gated: Boolean;
+  begin
+    Result := sess.FilterNSFW and entry.IsNSFW and (not revealed);
+  end;
 
   function MaxTop: Integer;
   begin
@@ -117,9 +123,12 @@ var
     SetLength(lines, 0);
     SetLength(lineOwner, 0);
     SetLength(images, 0);
-    AppendImages(images, ExtractImages(entry.Content));
-    for i := 0 to High(replies) do
-      AppendImages(images, ExtractImages(replies[i].Content));
+    if not Gated then // a gated NSFW thread exposes no images until revealed
+    begin
+      AppendImages(images, ExtractImages(entry.Content));
+      for i := 0 to High(replies) do
+        AppendImages(images, ExtractImages(replies[i].Content));
+    end;
     textW := ScreenCols - 2;
     if textW < 8 then
       textW := 8;
@@ -127,7 +136,7 @@ var
     // Entry header + body (owner -1).
     AddLine('@' + entry.AuthorUsername + '   ·   ' + RelativeTime(entry.CreatedAt),
       cpAccent, True, -1);
-    if Trim(entry.Title) <> '' then
+    if (not Gated) and (Trim(entry.Title) <> '') then
       AddLine(entry.Title, cpText, True, -1);
     if Length(entry.Topics) > 0 then
     begin
@@ -140,6 +149,8 @@ var
 
     if entry.Deleted then
       AddLine('[deleted]', cpMeta, False, -1)
+    else if Gated then
+      AddLine('🔞 NSFW content hidden — press x to reveal', cpNsfw, False, -1)
     else
     begin
       body := CleanImageMarkdown(entry.Content);
@@ -259,7 +270,7 @@ var
   procedure Redraw;
   var
     i, idx: Integer;
-    status, selDesc: string;
+    status, selDesc, wtag, hsum: string;
   begin
     visible := ScreenRows - 2;
     if visible < 1 then
@@ -275,11 +286,15 @@ var
 
     UIErase;
     if watching then
-      DrawBar(0, cpHeader, ' thread 👁 watching   ·   @' + entry.AuthorUsername +
-        '   ·   ' + EntrySummary(entry))
+      wtag := ' 👁 watching'
     else
-      DrawBar(0, cpHeader, ' thread   ·   @' + entry.AuthorUsername + '   ·   ' +
-        EntrySummary(entry));
+      wtag := '';
+    if Gated then
+      hsum := '[NSFW hidden]'
+    else
+      hsum := EntrySummary(entry);
+    DrawBar(0, cpHeader, ' thread' + wtag + '   ·   @' + entry.AuthorUsername +
+      '   ·   ' + hsum);
 
     for i := 0 to visible - 1 do
     begin
@@ -305,6 +320,11 @@ var
         status := status + ' · w unwatch'
       else
         status := status + ' · w watch';
+      if sess.FilterNSFW and entry.IsNSFW then
+        if revealed then
+          status := status + ' · x hide'
+        else
+          status := status + ' · x reveal';
       if SelAuthor = sess.Username then
         status := status + ' · d delete';
       if Length(images) > 0 then
@@ -321,6 +341,7 @@ begin
   Result := False;
   err := '';
   selReply := -1;
+  revealed := False;
   LoadReplies(True);
   BuildLines;
   top := 0;
@@ -370,7 +391,9 @@ begin
           BuildLines;
         end;
       Ord('i'):
-        if Length(images) > 0 then
+        if Gated then
+          err := 'Reveal NSFW content first (x).'
+        else if Length(images) > 0 then
           ViewImages(images)
         else
           err := 'No images in this thread.';
@@ -378,6 +401,12 @@ begin
         RunProfile(sess, SelAuthor);
       Ord('w'):
         DoWatchToggle;
+      Ord('x'):
+        if sess.FilterNSFW and entry.IsNSFW then
+        begin
+          revealed := not revealed;
+          BuildLines; // re-render body/images with the new gate state
+        end;
       Ord('c'):
         begin
           if selReply = -1 then

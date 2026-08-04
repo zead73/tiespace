@@ -219,9 +219,7 @@ var
     if e.RepliesCount > 0 then
       right := IntToStr(e.RepliesCount) + '↩  ';
     right := right + RelativeTime(e.CreatedAt);
-    summary := EntrySummary(e);
-    if e.IsNSFW then
-      summary := '[NSFW] ' + summary;
+    summary := FeedSummary(e, sess.FilterNSFW);
     rightW := VisibleWidth(right);
     sumX := 2;
     rightX := W - rightW - 1;

@@ -134,6 +134,14 @@ begin
 
   e := Default(TEntry);
   EqS(EntrySummary(e), '(no title)', 'EntrySummary: empty -> (no title)');
+
+  // FeedSummary: NSFW masking honours the filter flag.
+  e := Default(TEntry); e.Title := 'Hi';
+  EqS(FeedSummary(e, False), 'Hi', 'FeedSummary: non-NSFW plain');
+  EqS(FeedSummary(e, True), 'Hi', 'FeedSummary: non-NSFW ignores the filter');
+  e.IsNSFW := True;
+  EqS(FeedSummary(e, False), '[NSFW] Hi', 'FeedSummary: NSFW labelled, filter off');
+  EqS(FeedSummary(e, True), '[NSFW hidden]', 'FeedSummary: NSFW masked, filter on');
 end;
 
 procedure TestRelativeTime;

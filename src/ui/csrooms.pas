@@ -407,7 +407,7 @@ var
     begin
       DrawBar(ScreenRows - 1, cpText, '');
       DrawText(ScreenRows - 1, 0, cpMeta,
-        '> type · Enter send · ↑/PgUp scroll · Tab select/delete · Esc leave');
+        '> type · Enter send · /help cmds · ↑/PgUp scroll · Tab select · Esc leave');
       UICursorVisible(True);
       UIPlaceCursor(ScreenRows - 1, 2);
     end
@@ -476,12 +476,79 @@ var
       top := MaxTop;
   end;
 
+  { A static reference of the IRC-style slash commands, shown when the user
+    sends "/help". Scrollable; any non-scroll key closes. }
+  procedure ShowCommandHelp;
+  const
+    CMDS: array[0..16] of string = (
+      '  /me <action>              a third-person action',
+      '  /poke /hug /hi5 /slap [@user]   emote at someone (or solo)',
+      '  /dice <notation>          roll dice: 4d6kh3, 2d6+3, adv, d%',
+      '  /8ball <question>         ask the magic 8-ball',
+      '  /fortune                  a random fortune cookie',
+      '  /gif <https url>          post an animated GIF (must be a GIF)',
+      '  /song <yt> | artist | title    jukebox track (supporter only)',
+      '  /art <ascii art>          ASCII art — cIRC only, 80x25 max',
+      '  /mute /unmute <user>      manage mutes; /muted, /unmuteall',
+      '',
+      '  styles: /blink /l33t /comic /cursive /times /rainbow /flip',
+      '          /quiet /slow /glitch /spoiler /wave <message>',
+      '          chain with +   e.g.  /comic+rainbow hello',
+      '',
+      '  /help                     show this list',
+      '',
+      '  Plain text posts as-is.   j/k scroll · any other key closes');
+  var
+    top, visible, maxtop, k, i, idx: Integer;
+  begin
+    top := 0;
+    repeat
+      UIErase;
+      DrawBar(0, cpHeader, ' cIRC — slash commands');
+      visible := ScreenRows - 1;
+      if visible < 1 then
+        visible := 1;
+      maxtop := High(CMDS) - visible + 1;
+      if maxtop < 0 then
+        maxtop := 0;
+      if top > maxtop then
+        top := maxtop;
+      if top < 0 then
+        top := 0;
+      for i := 0 to visible - 1 do
+      begin
+        idx := top + i;
+        if idx <= High(CMDS) then
+          DrawText(1 + i, 1, cpText, CMDS[idx]);
+      end;
+      UIRefresh;
+      k := UIGetKey;
+      case k of
+        -1: ; // live-stream tick; ignore
+        Ord('j'), KEY_DOWN: if top < maxtop then Inc(top);
+        Ord('k'), KEY_UP: if top > 0 then Dec(top);
+        KEY_NPAGE: top := top + visible;
+        KEY_PPAGE: top := top - visible;
+      else
+        Break; // any other key closes
+      end;
+    until False;
+  end;
+
   procedure DoSend;
   var
-    mid, serr, lerr: string;
+    mid, serr, lerr, cmd: string;
   begin
     if Trim(inputBuf) = '' then
       Exit;
+    cmd := LowerCase(Trim(inputBuf));
+    if (cmd = '/help') or (cmd = '/commands') or (cmd = '/?') then
+    begin
+      ShowCommandHelp;
+      inputBuf := '';
+      inputCur := 0;
+      Exit;
+    end;
     if not Limiter.Check('chat', lerr) then
     begin
       err := lerr;
