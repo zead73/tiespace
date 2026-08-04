@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsNotes, CsWatches, CsRateLimit;
+  CsNotes, CsWatches, CsSettings, CsRateLimit;
 
 const
   PAGE = 25;
@@ -139,7 +139,7 @@ var
 
 procedure ShowHelp;
 const
-  h: array[0..20] of string = (
+  h: array[0..21] of string = (
     '+----------------------------------------------------------------------+',
     '|                        TIESPACE - KEYBINDINGS                        |',
     '+----------------------------------+-----------------------------------+',
@@ -153,6 +153,7 @@ const
     '|   p        Author Profile        |   /              Search           |',
     '|   r        Reload screen         |   q / Q          Quit / Log out   |',
     '|   W        Watches               |   ?              This help        |',
+    '|   S        Settings              |                                   |',
     '+----------------------------------+-----------------------------------+',
     '| CONTEXT SHORTCUTS                                                    |',
     '|   In Guild     [Enter] Thread [c] New  [m] Members [J/L] Join/Leave  |',
@@ -239,13 +240,13 @@ begin
                 Seg(2 + i, h[i], 1, 34, cpAccent, True);
                 Seg(2 + i, h[i], 36, 35, cpAccent, True);
               end;
-      4..12:  begin                                       // two key columns
+      4..13:  begin                                       // two key columns
                 DrawCell(2 + i, h[i], 1, 34);
                 DrawCell(2 + i, h[i], 36, 35);
               end;
-      14:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
-      15..19: DrawContext(2 + i, h[i]);                    // context rows
-    end;                                                   // 0/2/13/20: borders
+      15:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
+      16..20: DrawContext(2 + i, h[i]);                    // context rows
+    end;                                                   // 0/2/14/21: borders
   end;
 
   // Sits just below the box, centred under it; clamped so it stays on screen.
@@ -413,6 +414,11 @@ begin
       Ord('W'):
         begin
           RunWatches(sess);
+          err := '';
+        end;
+      Ord('S'):
+        begin
+          RunSettings(sess);
           err := '';
         end;
       Ord('p'):

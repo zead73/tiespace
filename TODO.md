@@ -26,15 +26,20 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
 - [x] rate rule: `watch` = 10/min, 100/day
 - [x] README + this checklist
 
-### Settings — read/write account preferences
+### Settings — read/write account preferences ✅ done (feed key `S`)
 `GET` / `PATCH /v1/settings`.
-- [ ] `csapi`: GetSettings / UpdateSettings
-- [ ] `csmodels`: `TSettings` covering the documented fields
-- [ ] `ui/cssettings.pas`: view + toggle fields (notifications per-type, `filterNSFW`,
-      `showFollowerCount`, `hideImagesInFeed`, `hideAudioInFeed`, `autoWatchOnReply`,
-      `defaultPublicPost`, `timeDisplayFormat`, `imagePixelSize`, muted/followed topics, …)
-- [ ] rate rule: `settings` = 2/min, 15/day
-- [ ] README + this checklist
+- [x] `ui/cssettings.pas`: toggle-and-save checklist — reads GET /v1/settings and
+      PATCHes only changed fields (self-contained; no separate csapi/csmodels layer
+      since these prefs are view-local). `Space` toggles, `s` saves in one request,
+      discard-guard on quit with unsaved changes.
+- [x] fields: the documented top-level booleans (`filterNSFW`, `autoWatchOnReply`,
+      `defaultPublicPost`, `showFollowerCount`, `hideImagesInFeed`, `hideAudioInFeed`,
+      `useLegacyMenuOrder`) + per-type notification switches read **dynamically** from
+      the returned `notifications` object (sent back in full so a replace-PATCH is safe)
+- [x] rate rule: `settings` = 2/min, 15/day
+- [x] README + this checklist
+- ~~complex fields (keyboardBindings/preset, iconTheme, muted/followed topics,
+      imagePixelSize, timeDisplayFormat) left for the theming/keybindings items~~
 
 ## Client-side polish (no new API — just UI/rendering)
 

@@ -37,6 +37,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
   revision), `v` browse revision history, `d` delete
 - watched threads (`W`): the threads you watch for replies; Enter opens one,
   `x` unwatches (watch/unwatch from inside a thread with `w`)
+- settings (`S`): toggle account preferences — NSFW filter, auto-watch on
+  reply, per-type notifications, feed/display switches; `Space` toggles, `s`
+  saves all changes in one request
 
 **Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
@@ -46,8 +49,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the remaining M4 polish items — settings, read-side NSFW
-blur/filter, theming/keybindings.
+**Not yet built**: the remaining M4 polish items — read-side NSFW blur/filter,
+richer markdown, slash-command help, theming/keybindings.
 
 ## Build
 
