@@ -16,6 +16,10 @@ BIN    = bin
 
 .PHONY: all app spike session test clean dirs
 
+# Targets share the build/ unit-output dir, so a parallel build (make -jN) could
+# race two fpc runs compiling the same units. Builds are sub-second; serialise.
+.NOTPARALLEL:
+
 all: app test
 
 app: dirs
