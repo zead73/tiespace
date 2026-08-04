@@ -15,7 +15,7 @@ mirrors the API's documented limits.
 A working, human-driven client. Confirmed against a live account.
 
 **Auth** — in-TUI login (`Q` logs out to it; OPTIONAL reads the password from `~/.cs-pw`,
-remembers the email, session restore, token refresh, `0600` credential file.
+remembers the email), session restore, token refresh, `0600` credential file.
 
 **Read / write (social)** — press `?` in the feed for the full keybinding list
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
