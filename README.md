@@ -34,10 +34,11 @@ remembers the email), session restore, token refresh, `0600` credential file.
 
 **Read / write (social)** — press `?` in the feed for the full keybinding list
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
-- thread view: **selectable** entry + replies; `c` reply (to the entry or to a
-  specific reply, nested); `d` delete your own entry or reply; `p` author
-  profile; `i` view post images (shells out to `chafa`); `w` watch/unwatch the
-  thread (a 👁 marks a watched thread)
+- thread view: **selectable** entry + replies with **rendered markdown** in
+  bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
+  `---` rules); `c` reply (to the entry or to a specific reply, nested); `d`
+  delete your own entry or reply; `p` author profile; `i` view post images
+  (shells out to `chafa`); `w` watch/unwatch the thread (a 👁 marks a watched thread)
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
@@ -67,8 +68,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the remaining M4 polish items — richer markdown in thread
-bodies, theming, remappable keybindings.
+**Not yet built**: the remaining M4 polish items — theming, remappable
+keybindings.
 
 ## Build
 

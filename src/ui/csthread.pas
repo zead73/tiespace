@@ -20,8 +20,8 @@ function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsApi, CsRateLimit, CsCompose,
-  CsImage, CsProfile;
+  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsMarkdown, CsApi, CsRateLimit,
+  CsCompose, CsImage, CsProfile;
 
 const
   PAGE = 50;
@@ -61,7 +61,7 @@ function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
 var
   replies: TReplyArray;
   cursor, nextCursor, err, derr: string;
-  lines: TRenderLines;
+  lines: TStyleLines; // each display line is a sequence of styled runs
   lineOwner: array of Integer; // -2 non-selectable, -1 entry, k = reply k
   images: TImageRefs;
   top, visible, key, lastCols, selReply: Integer;
@@ -80,11 +80,54 @@ var
       Result := 0;
   end;
 
-  procedure AddLine(const text: string; pair: Integer; bold: Boolean; owner: Integer);
+  { Append a styled display line (a sequence of runs) with an owner. }
+  procedure AddRunsLine(const runs: TStyleRuns; owner: Integer);
   begin
-    RLAdd(lines, text, pair, bold);
+    SetLength(lines, Length(lines) + 1);
+    lines[High(lines)] := runs;
     SetLength(lineOwner, Length(lines));
     lineOwner[High(lineOwner)] := owner;
+  end;
+
+  { Append a single-style line (headers, meta, dividers). }
+  procedure AddLine(const text: string; pair: Integer; bold: Boolean; owner: Integer);
+  var
+    r: TStyleRuns;
+  begin
+    SetLength(r, 1);
+    r[0].Text := text;
+    r[0].Pair := pair;
+    r[0].Bold := bold;
+    r[0].Underline := False;
+    AddRunsLine(r, owner);
+  end;
+
+  { A body's markdown lines, each optionally prefixed with an indent run. }
+  procedure AddMarkdown(const content, indent: string; owner: Integer; textW: Integer);
+  var
+    md: TStyleLines;
+    r: TStyleRuns;
+    k, m: Integer;
+  begin
+    md := RenderMarkdown(content, textW - Length(indent));
+    for k := 0 to High(md) do
+    begin
+      SetLength(r, 0);
+      if indent <> '' then
+      begin
+        SetLength(r, 1);
+        r[0].Text := indent;
+        r[0].Pair := cpText;
+        r[0].Bold := False;
+        r[0].Underline := False;
+      end;
+      for m := 0 to High(md[k]) do
+      begin
+        SetLength(r, Length(r) + 1);
+        r[High(r)] := md[k][m];
+      end;
+      AddRunsLine(r, owner);
+    end;
   end;
 
   function SelAuthor: string;
@@ -115,9 +158,7 @@ var
 
   procedure BuildLines;
   var
-    body: string;
-    wrapped: TTextLines;
-    i, j, textW: Integer;
+    i, textW: Integer;
     topicsLine, head, indent: string;
   begin
     SetLength(lines, 0);
@@ -152,12 +193,7 @@ var
     else if Gated then
       AddLine('🔞 NSFW content hidden — press x to reveal', cpNsfw, False, -1)
     else
-    begin
-      body := CleanImageMarkdown(entry.Content);
-      wrapped := WrapText(body, textW);
-      for i := 0 to High(wrapped) do
-        AddLine(wrapped[i], cpText, False, -1);
-    end;
+      AddMarkdown(CleanImageMarkdown(entry.Content), '', -1, textW);
 
     if Length(images) > 0 then
     begin
@@ -187,11 +223,7 @@ var
       if replies[i].Deleted then
         AddLine(indent + '[deleted]', cpMeta, False, i)
       else
-      begin
-        wrapped := WrapText(CleanImageMarkdown(replies[i].Content), textW - Length(indent));
-        for j := 0 to High(wrapped) do
-          AddLine(indent + wrapped[j], cpText, False, i);
-      end;
+        AddMarkdown(CleanImageMarkdown(replies[i].Content), indent, i, textW);
       AddLine('', cpText, False, i);
     end;
 
@@ -303,7 +335,7 @@ var
       begin
         if lineOwner[idx] = selReply then
           DrawText(1 + i, 0, cpAccent, '▎', True);
-        DrawText(1 + i, 1, lines[idx].Pair, lines[idx].Text, lines[idx].Bold);
+        DrawRuns(1 + i, 1, lines[idx]);
       end;
     end;
 

@@ -48,8 +48,11 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       session, kept in sync when Settings saves). Centralised `FeedSummary` masks NSFW
       rows to `[NSFW hidden]` across feed/profile/topics/guilds; the thread view gates an
       NSFW entry's title/body/images behind `x` reveal (and blocks `i` until revealed).
-- [ ] **Richer markdown rendering** — inline bold/italic/headings/lists/links in thread
-      bodies (today content is entity-decoded and lightly cleaned for summaries only)
+- [x] **Richer markdown rendering** — new `ui/csmarkdown.pas` renders decoded content
+      into styled runs (bold, italic→underline, `code`, links, headings, `-`/`1.` lists,
+      `>` quotes, `---` rules); CsUI gained a run/underline draw path (`TStyleRuns`,
+      `DrawRuns`/`DrawStyled`) and the thread view draws bodies as styled runs. Parser is
+      unit-tested (18 asserts).
 - [x] **Slash-command help** — `/help` (or `/commands`, `/?`) in a cIRC room opens a
       scrollable static reference of the slash commands (intercepted client-side, posts
       nothing); status line hints `/help cmds`

@@ -17,7 +17,7 @@ program testsuite;
 
 uses
   clocale, SysUtils, fpjson, jsonparser,
-  CsModels, CsRateLimit, CsUI;
+  CsModels, CsRateLimit, CsUI, CsMarkdown;
 
 var
   gPass, gFail, gSkip: Integer;
@@ -167,6 +167,74 @@ begin
   EqB(Limiter.Check('reply', m), True, 'RateLimit: other actions unaffected');
 end;
 
+function LineText(const line: TStyleRuns): string;
+var i: Integer;
+begin
+  Result := '';
+  for i := 0 to High(line) do
+    Result := Result + line[i].Text;
+end;
+
+function FindRun(const doc: TStyleLines; const needle: string; out r: TStyleRun): Boolean;
+var i, j: Integer;
+begin
+  Result := False;
+  for i := 0 to High(doc) do
+    for j := 0 to High(doc[i]) do
+      if doc[i][j].Text = needle then
+      begin
+        r := doc[i][j];
+        Exit(True);
+      end;
+end;
+
+procedure TestMarkdown;
+var
+  doc: TStyleLines;
+  r: TStyleRun;
+begin
+  doc := RenderMarkdown('a **b** c', 80);
+  EqS(LineText(doc[0]), 'a b c', 'md: ** stripped');
+  EqB(FindRun(doc, 'b', r) and r.Bold, True, 'md: ** -> bold');
+
+  doc := RenderMarkdown('a *b* c', 80);
+  EqS(LineText(doc[0]), 'a b c', 'md: * stripped');
+  EqB(FindRun(doc, 'b', r) and r.Underline, True, 'md: * -> italic/underline');
+
+  doc := RenderMarkdown('a `b` c', 80);
+  EqB(FindRun(doc, 'b', r) and (r.Pair = cpMeta), True, 'md: `code` -> meta colour');
+
+  doc := RenderMarkdown('[go](http://x)', 80);
+  EqB(FindRun(doc, 'go', r) and (r.Pair = cpAccent) and r.Underline, True,
+    'md: link -> accent + underline');
+  doc := RenderMarkdown('[](http://x)', 80);
+  EqS(LineText(doc[0]), 'http://x', 'md: empty link text -> url');
+
+  doc := RenderMarkdown('# Title', 80);
+  EqS(LineText(doc[0]), 'Title', 'md: heading marker stripped');
+  EqB(FindRun(doc, 'Title', r) and r.Bold and (r.Pair = cpAccent), True,
+    'md: heading -> bold accent');
+
+  doc := RenderMarkdown('- item', 80);
+  EqS(LineText(doc[0]), '• item', 'md: unordered bullet');
+  doc := RenderMarkdown('1. item', 80);
+  EqS(LineText(doc[0]), '1. item', 'md: ordered list');
+  doc := RenderMarkdown('> quoted', 80);
+  EqS(LineText(doc[0]), '│ quoted', 'md: blockquote prefix');
+
+  doc := RenderMarkdown('snake_case_name', 80);
+  EqS(LineText(doc[0]), 'snake_case_name', 'md: in-word underscores literal');
+
+  doc := RenderMarkdown('aaa bbb ccc', 7);
+  EqI(Length(doc), 2, 'md: wraps at width');
+  EqS(LineText(doc[0]), 'aaa bbb', 'md: wrap line 1');
+  EqS(LineText(doc[1]), 'ccc', 'md: wrap line 2');
+
+  doc := RenderMarkdown('**aaa bbb**', 5);
+  EqB((Length(doc) = 2) and FindRun(doc, 'aaa', r) and r.Bold, True, 'md: bold survives wrap (1)');
+  EqB(FindRun(doc, 'bbb', r) and r.Bold, True, 'md: bold survives wrap (2)');
+end;
+
 procedure TestLayout;
 var w: TTextLines;
 begin
@@ -222,6 +290,7 @@ begin
   TestRelativeTime;
   TestRateLimit;
   TestLayout;
+  TestMarkdown;
 
   WriteLn;
   WriteLn(Format('tiespace tests: %d passed, %d failed, %d skipped',

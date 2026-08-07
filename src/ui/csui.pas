@@ -33,6 +33,18 @@ type
   end;
   TRenderLines = array of TRenderLine;
 
+  { A styled span: one run of text with a colour pair and bold/underline attrs.
+    A display line is a sequence of runs, so styling can vary within a line
+    (used by the markdown renderer). }
+  TStyleRun = record
+    Text: string;
+    Pair: Integer;
+    Bold: Boolean;
+    Underline: Boolean;
+  end;
+  TStyleRuns = array of TStyleRun;
+  TStyleLines = array of TStyleRuns;
+
 procedure UIInit;
 procedure UIShutdown;
 function ScreenRows: Integer;
@@ -46,6 +58,11 @@ function UIGetKey: LongInt;
 procedure DrawText(y, x, pair: Integer; const s: string; bold: Boolean = False);
 { Fill an entire row with a colour pair, text left-aligned, padded to width. }
 procedure DrawBar(y, pair: Integer; const s: string);
+{ Like DrawText but with an underline attribute too (for links / emphasis). }
+procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline: Boolean);
+{ Draw a sequence of styled runs left-to-right starting at (y,x). Runs are
+  assumed already wrapped to fit; anything past the screen edge is clipped. }
+procedure DrawRuns(y, x: Integer; const runs: TStyleRuns);
 
 { Display width of a UTF-8 string, in terminal cells. }
 function VisibleWidth(const s: string): Integer;
@@ -346,6 +363,41 @@ begin
   ApplyAttr(pair, False);
   mvaddstr(y, 0, PChar(PadOrTrunc(s, ScreenCols)));
   attrset(chtype(A_NORMAL));
+end;
+
+procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline: Boolean);
+var
+  room: Integer;
+  txt: string;
+  a: chtype;
+  cut: Boolean;
+begin
+  room := ScreenCols - x;
+  if room <= 0 then
+    Exit;
+  txt := TruncCols(s, room, cut); // clip to the row, no ellipsis (runs continue)
+  a := chtype(COLOR_PAIR(pair));
+  if bold then
+    a := a or chtype(A_BOLD);
+  if underline then
+    a := a or chtype(A_UNDERLINE);
+  attrset(a);
+  mvaddstr(y, x, PChar(txt));
+  attrset(chtype(A_NORMAL));
+end;
+
+procedure DrawRuns(y, x: Integer; const runs: TStyleRuns);
+var
+  i, cx: Integer;
+begin
+  cx := x;
+  for i := 0 to High(runs) do
+  begin
+    if cx >= ScreenCols then
+      Break;
+    DrawStyled(y, cx, runs[i].Pair, runs[i].Text, runs[i].Bold, runs[i].Underline);
+    cx := cx + VisibleWidth(runs[i].Text);
+  end;
 end;
 
 procedure AppendLine(var arr: TTextLines; const s: string);
