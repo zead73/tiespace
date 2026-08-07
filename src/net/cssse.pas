@@ -37,9 +37,16 @@ type
     IsChatAdmin: Boolean;
     Online: Boolean;
     Typing: Boolean;
-    LastSeen: Int64; // 'lastSeen' (chat presence) or 'timestamp' (dm typing)
+    LastSeen: Int64;     // 'lastSeen' (chat presence) or 'timestamp' (dm typing)
+    LastActivity: Int64; // 'lastActivity' ms epoch; 0 = not reported (reads active)
   end;
   TNameArray = array of string;
+
+  TOnlineUser = record
+    Name: string;
+    Idle: Boolean; // no activity within idleAfterMs -> shown asleep
+  end;
+  TOnlineArray = array of TOnlineUser;
 
   TRtdbSSEThread = class(TThread)
   private
@@ -88,12 +95,15 @@ type
   public
     constructor Create(const AUrl: string);
     destructor Destroy; override;
-    { Usernames considered present (online and lastSeen within staleAfterMs),
-      sorted. }
-    procedure GetOnline(out names: TNameArray; staleAfterMs: Int64);
+    { Present users (online, lastSeen within staleAfterMs), sorted by name, each
+      flagged idle when their reported lastActivity is older than idleAfterMs. }
+    procedure GetOnlineUsers(out users: TOnlineArray; staleAfterMs, idleAfterMs: Int64);
     { Usernames currently typing (typing and fresh), excluding `exclude`. }
     procedure GetTyping(out names: TNameArray; staleAfterMs: Int64; const exclude: string);
   end;
+
+{ Current time as a UTC millisecond epoch, matching the server's timestamps. }
+function NowMs: Int64;
 
 implementation
 
@@ -448,6 +458,7 @@ end;
 procedure TPresenceThread.UpsertP(const uid: string; obj: TJSONObject);
 var
   k: Integer;
+  ld: TJSONData;
 begin
   EnterCriticalSection(FLock);
   try
@@ -471,6 +482,12 @@ begin
       FMap[k].LastSeen := obj.Get('lastSeen', FMap[k].LastSeen);
     if obj.Find('timestamp') <> nil then
       FMap[k].LastSeen := obj.Get('timestamp', FMap[k].LastSeen);
+    ld := obj.Find('lastActivity');
+    if ld <> nil then
+      if ld.JSONType = jtNumber then
+        FMap[k].LastActivity := ld.AsInt64
+      else
+        FMap[k].LastActivity := 0; // null/unknown -> treat as active
   finally
     LeaveCriticalSection(FLock);
   end;
@@ -530,36 +547,40 @@ begin
   end;
 end;
 
-procedure TPresenceThread.GetOnline(out names: TNameArray; staleAfterMs: Int64);
+procedure TPresenceThread.GetOnlineUsers(out users: TOnlineArray; staleAfterMs, idleAfterMs: Int64);
 var
   i, j: Integer;
-  cutoff: Int64;
-  tmp: string;
+  nowm, cutoff, idleCut: Int64;
+  tmp: TOnlineUser;
 begin
-  SetLength(names, 0);
-  cutoff := NowMs - staleAfterMs;
+  SetLength(users, 0);
+  nowm := NowMs;
+  cutoff := nowm - staleAfterMs;
+  idleCut := nowm - idleAfterMs;
   EnterCriticalSection(FLock);
   try
     for i := 0 to High(FMap) do
       if FMap[i].Online and (FMap[i].LastSeen >= cutoff) and (FMap[i].Username <> '') then
       begin
-        SetLength(names, Length(names) + 1);
-        names[High(names)] := FMap[i].Username;
+        SetLength(users, Length(users) + 1);
+        users[High(users)].Name := FMap[i].Username;
+        users[High(users)].Idle :=
+          (FMap[i].LastActivity > 0) and (FMap[i].LastActivity < idleCut);
       end;
   finally
     LeaveCriticalSection(FLock);
   end;
-  // sort case-insensitively (small n)
-  for i := 1 to High(names) do
+  // sort case-insensitively by name (small n)
+  for i := 1 to High(users) do
   begin
-    tmp := names[i];
+    tmp := users[i];
     j := i - 1;
-    while (j >= 0) and (LowerCase(names[j]) > LowerCase(tmp)) do
+    while (j >= 0) and (LowerCase(users[j].Name) > LowerCase(tmp.Name)) do
     begin
-      names[j + 1] := names[j];
+      users[j + 1] := users[j];
       Dec(j);
     end;
-    names[j + 1] := tmp;
+    users[j + 1] := tmp;
   end;
 end;
 

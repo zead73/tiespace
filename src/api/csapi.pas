@@ -39,9 +39,11 @@ function SendChatMessage(sess: TCsSession; const roomId, content: string;
 function DeleteChatMessage(sess: TCsSession; const roomId, messageId: string;
   out err: string): Boolean;
 
-{ Announce presence in a room (heartbeat). Returns the cadence to use. }
-function AnnouncePresence(sess: TCsSession; const roomId: string;
-  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+{ Announce presence in a room (heartbeat). Reports our last activity (ms epoch;
+  pass 0 to omit) so idle users can show as asleep; returns the cadence plus the
+  idle window. }
+function AnnouncePresence(sess: TCsSession; const roomId: string; lastActivity: Int64;
+  out heartbeatMs, staleAfterMs, idleAfterMs: Integer; out err: string): Boolean;
 { Remove your presence from a room (on leave). }
 function LeavePresence(sess: TCsSession; const roomId: string; out err: string): Boolean;
 
@@ -360,28 +362,37 @@ begin
   Result := DeleteAt(sess, '/v1/circ/' + roomId + '/messages/' + messageId, err);
 end;
 
-function AnnouncePresence(sess: TCsSession; const roomId: string;
-  out heartbeatMs, staleAfterMs: Integer; out err: string): Boolean;
+function AnnouncePresence(sess: TCsSession; const roomId: string; lastActivity: Int64;
+  out heartbeatMs, staleAfterMs, idleAfterMs: Integer; out err: string): Boolean;
 var
-  env, d: TJSONObject;
+  body, env, d: TJSONObject;
 begin
   Result := False;
   heartbeatMs := 30000;
   staleAfterMs := 180000;
+  idleAfterMs := 300000;
   err := '';
+  body := TJSONObject.Create;
   try
-    env := sess.Client.PostJSONObj('/v1/circ/' + roomId + '/presence', nil);
+    if lastActivity > 0 then
+      body.Add('lastActivity', lastActivity);
     try
-      d := CsData(env);
-      heartbeatMs := d.Get('heartbeatMs', heartbeatMs);
-      staleAfterMs := d.Get('staleAfterMs', staleAfterMs);
-      Result := True;
-    finally
-      env.Free;
+      env := sess.Client.PostJSONObj('/v1/circ/' + roomId + '/presence', body);
+      try
+        d := CsData(env);
+        heartbeatMs := d.Get('heartbeatMs', heartbeatMs);
+        staleAfterMs := d.Get('staleAfterMs', staleAfterMs);
+        idleAfterMs := d.Get('idleAfterMs', idleAfterMs);
+        Result := True;
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
     end;
-  except
-    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
-    on E: Exception do err := E.Message;
+  finally
+    body.Free;
   end;
 end;
 

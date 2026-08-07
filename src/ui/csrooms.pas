@@ -80,9 +80,10 @@ var
   selMode: Boolean;
   stream: TChatStreamThread;
   presence: TPresenceThread;
-  onlineNames: TNameArray;
-  heartbeatMs, staleAfterMs: Integer;
+  online: TOnlineArray;
+  heartbeatMs, staleAfterMs, idleAfterMs: Integer;
   lastBeat: TDateTime;
+  lastActivityMs: Int64; // ms epoch of our last keypress, reported on heartbeat
 
   function MaxTop: Integer;
   begin
@@ -346,7 +347,7 @@ var
       top := 0;
 
     if presence <> nil then
-      presence.GetOnline(onlineNames, staleAfterMs);
+      presence.GetOnlineUsers(online, staleAfterMs, idleAfterMs);
 
     UIErase;
     if stream = nil then
@@ -357,8 +358,8 @@ var
       live := '   ·   ● live'
     else
       live := '   ·   connecting…';
-    if (presence <> nil) and (Length(onlineNames) > 0) then
-      count := Length(onlineNames)
+    if (presence <> nil) and (Length(online) > 0) then
+      count := Length(online)
     else
       count := room.OnlineCount;
     DrawBar(0, cpHeader, ' cIRC   ·   #' + room.Slug + '   ·   ' +
@@ -381,13 +382,17 @@ var
       sepX := ScreenCols - PanelW - 1;
       for i := 1 to ScreenRows - 2 do
         DrawText(i, sepX, cpMeta, '│');
-      DrawText(1, sepX + 2, cpAccent, 'online (' + IntToStr(Length(onlineNames)) + ')', True);
-      for i := 0 to High(onlineNames) do
+      DrawText(1, sepX + 2, cpAccent, 'online (' + IntToStr(Length(online)) + ')', True);
+      for i := 0 to High(online) do
       begin
         if 3 + i > ScreenRows - 2 then
           Break;
-        DrawText(3 + i - 1, sepX + 2, cpText,
-          TruncEllipsis(onlineNames[i], PanelW - 3));
+        if online[i].Idle then // asleep: dimmed, with a 💤 marker
+          DrawText(3 + i - 1, sepX + 2, cpMeta,
+            TruncEllipsis('💤 ' + online[i].Name, PanelW - 3))
+        else
+          DrawText(3 + i - 1, sepX + 2, cpText,
+            TruncEllipsis(online[i].Name, PanelW - 3));
       end;
     end;
 
@@ -635,7 +640,9 @@ var
   begin
     if MilliSecondsBetween(Now, lastBeat) >= heartbeatMs then
     begin
-      AnnouncePresence(sess, roomId, heartbeatMs, staleAfterMs, e); // errors ignored
+      // report our last activity so others see us asleep once idle
+      AnnouncePresence(sess, roomId, lastActivityMs, heartbeatMs, staleAfterMs,
+        idleAfterMs, e); // errors ignored
       lastBeat := Now;
     end;
   end;
@@ -653,9 +660,11 @@ begin
   selMsg := -1;
   stream := nil;
   presence := nil;
-  SetLength(onlineNames, 0);
+  SetLength(online, 0);
   heartbeatMs := 30000;
   staleAfterMs := 180000;
+  idleAfterMs := 300000;
+  lastActivityMs := NowMs; // we just walked in; we're active
 
   // A fresh idToken keeps the stream valid for ~1h (a viewing session).
   try
@@ -684,7 +693,7 @@ begin
   end;
 
   // Announce ourselves so others see us in the room, then heartbeat in the loop.
-  AnnouncePresence(sess, roomId, heartbeatMs, staleAfterMs, err);
+  AnnouncePresence(sess, roomId, lastActivityMs, heartbeatMs, staleAfterMs, idleAfterMs, err);
   err := '';
   lastBeat := Now;
 
@@ -700,6 +709,8 @@ begin
       Heartbeat;
       Redraw;
       key := UIGetKey;
+      if key <> -1 then
+        lastActivityMs := NowMs; // a real keypress (not a stream tick) = activity
       if (key <> -1) and (err <> '') then
         err := ''; // a real keypress dismisses a transient error
       if selMode then
