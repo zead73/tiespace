@@ -60,7 +60,7 @@ end;
 function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
 var
   replies: TReplyArray;
-  cursor, nextCursor, err, derr: string;
+  cursor, nextCursor, err, derr, bmid: string;
   lines: TStyleLines; // each display line is a sequence of styled runs
   lineOwner: array of Integer; // -2 non-selectable, -1 entry, k = reply k
   images: TImageRefs;
@@ -347,7 +347,7 @@ var
         selDesc := 'entry'
       else
         selDesc := 'reply @' + replies[selReply].AuthorUsername;
-      status := ' ' + selDesc + '   ·   j/k select · c reply · p profile';
+      status := ' ' + selDesc + '   ·   j/k select · c reply · b bookmark · p profile';
       if watching then
         status := status + ' · w unwatch'
       else
@@ -431,6 +431,16 @@ begin
           err := 'No images in this thread.';
       Ord('p'):
         RunProfile(sess, SelAuthor);
+      Ord('b'):
+        if not Limiter.Check('bookmark', derr) then
+          err := derr
+        else if CreateBookmarkPost(sess, entry.PostId, bmid, derr) then
+        begin
+          Limiter.Note('bookmark');
+          err := 'Bookmarked this post.';
+        end
+        else
+          err := 'Bookmark failed: ' + derr;
       Ord('w'):
         DoWatchToggle;
       Ord('x'):
