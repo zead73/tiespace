@@ -10,6 +10,21 @@ automation, no background scraping, and real-time updates come from the
 server's push stream rather than polling loops. A client-side rate limiter
 mirrors the API's documented limits.
 
+## Screenshots
+
+![The feed](screenshots/tiespace-feed.png)
+
+*The feed — the paginated post list you land on after login.*
+
+![cIRC room list](screenshots/tiespace-chat1.png)
+
+*cIRC — the room list, with per-room online counts and last activity.*
+
+![A live cIRC room](screenshots/tiespace-chat2.png)
+
+*cIRC — a live room: streamed messages, the online-users panel, `🖼` image
+markers, and select mode (`Tab`) for acting on a message.*
+
 ## Status
 
 A working, human-driven client. Confirmed against a live account.
