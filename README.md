@@ -42,9 +42,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - thread view: **selectable** entry + replies with **rendered markdown** in
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
   `---` rules); `c` reply (to the entry or to a specific reply, nested); `d`
-  delete your own entry or reply; `b` bookmark the post; `p` author profile;
-  `i` view post images (shells out to `chafa`); `w` watch/unwatch the thread
-  (a 👁 marks a watched thread)
+  delete your own entry or reply; `b` bookmark the post; `f` report (flag) an
+  entry/reply; `p` author profile; `i` view post images (shells out to `chafa`);
+  `w` watch/unwatch the thread (a 👁 marks a watched thread)
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
@@ -71,7 +71,7 @@ remembers the email), session restore, token refresh, `0600` credential file.
   send + IRC slash-commands (`/help` shows the command reference), scrollback,
   live online-users panel (idle users shown asleep, `💤`) + presence heartbeat
   that reports your own activity; in select mode (`Tab`), `d` deletes your own
-  message and `i` views a message's image
+  message, `i` views a message's image, and `f` reports a message
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 

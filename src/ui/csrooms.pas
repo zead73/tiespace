@@ -401,7 +401,7 @@ var
     begin
       UICursorVisible(False);
       DrawBar(ScreenRows - 1, cpStatus,
-        ' SELECT · j/k pick · i view image · d delete own · Esc/Tab back to input');
+        ' SELECT · j/k pick · i image · d delete own · f flag · Esc/Tab back');
     end
     else if err <> '' then
     begin
@@ -606,6 +606,44 @@ var
     end;
   end;
 
+  { Report the selected message to moderators, with an optional reason. Can't
+    report your own; an already-deleted message can still be reported. }
+  procedure DoFlagMsg;
+  var
+    reason, lerr: string;
+    already, ok: Boolean;
+  begin
+    if (selMsg < 0) or (selMsg > High(msgs)) then
+      Exit;
+    if msgs[selMsg].Username = sess.Username then
+    begin
+      err := 'You can''t report your own message.';
+      Exit;
+    end;
+    if not UIConfirm('Report @' + msgs[selMsg].Username + '''s message to moderators?') then
+      Exit;
+    reason := '';
+    if UIConfirm('Add a reason?') then
+      if not UIPromptLine('Reason (Esc to skip):', reason) then
+        reason := '';
+    if not Limiter.Check('flag', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    ok := FlagChatMessage(sess, roomId, msgs[selMsg].Id, reason, already, lerr);
+    if ok then
+    begin
+      Limiter.Note('flag');
+      if already then
+        err := 'Already reported.'
+      else
+        err := 'Reported. ✓';
+    end
+    else
+      err := 'Report failed: ' + lerr;
+  end;
+
   procedure ViewSelImage;
   var
     imgs: TImageRefs;
@@ -750,6 +788,8 @@ begin
             ViewSelImage;
           Ord('d'):
             DoDeleteMsg;
+          Ord('f'):
+            DoFlagMsg;
         end;
         if selMsg > High(msgs) then
           selMsg := High(msgs);

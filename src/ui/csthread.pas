@@ -299,6 +299,55 @@ var
       err := 'Watch failed: ' + terr;
   end;
 
+  { Report the selected item (entry or reply) to moderators, with an optional
+    reason. Can't report your own content. }
+  procedure DoFlag;
+  var
+    reason, lerr, kind, id: string;
+    already, ok: Boolean;
+  begin
+    if SelAuthor = sess.Username then
+    begin
+      err := 'You can''t report your own content.';
+      Exit;
+    end;
+    if selReply = -1 then
+    begin
+      kind := 'entry';
+      id := entry.PostId;
+    end
+    else
+    begin
+      kind := 'reply';
+      id := replies[selReply].ReplyId;
+    end;
+    if not UIConfirm('Report this ' + kind + ' to moderators?') then
+      Exit;
+    reason := '';
+    if UIConfirm('Add a reason?') then
+      if not UIPromptLine('Reason (Esc to skip):', reason) then
+        reason := '';
+    if not Limiter.Check('flag', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    if selReply = -1 then
+      ok := FlagEntry(sess, id, reason, already, lerr)
+    else
+      ok := FlagReply(sess, id, reason, already, lerr);
+    if ok then
+    begin
+      Limiter.Note('flag');
+      if already then
+        err := 'Already reported.'
+      else
+        err := 'Reported. ✓';
+    end
+    else
+      err := 'Report failed: ' + lerr;
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
@@ -358,7 +407,9 @@ var
         else
           status := status + ' · x reveal';
       if SelAuthor = sess.Username then
-        status := status + ' · d delete';
+        status := status + ' · d delete'
+      else
+        status := status + ' · f flag';
       if Length(images) > 0 then
         status := status + ' · i img';
       if cursor <> '' then
@@ -443,6 +494,8 @@ begin
           err := 'Bookmark failed: ' + derr;
       Ord('w'):
         DoWatchToggle;
+      Ord('f'):
+        DoFlag;
       Ord('x'):
         if sess.FilterNSFW and entry.IsNSFW then
         begin

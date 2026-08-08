@@ -107,6 +107,16 @@ function UnwatchThread(sess: TCsSession; const postId: string; out err: string):
   Best-effort: leaves the session default on any error. }
 procedure RefreshPrefs(sess: TCsSession);
 
+{ Report content to moderators. `reason` is optional (<=500 chars). Idempotent:
+  `already` comes back True if you'd already flagged it. You can't flag your own
+  content (returns False with a 403 in err). }
+function FlagEntry(sess: TCsSession; const postId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+function FlagReply(sess: TCsSession; const replyId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+function FlagChatMessage(sess: TCsSession; const roomId, messageId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+
 implementation
 
 uses
@@ -868,6 +878,56 @@ begin
     on E: Exception do
       ; // best effort — keep the current value
   end;
+end;
+
+{ POST a flag with an optional reason; success sets `already` from the response. }
+function PostFlag(sess: TCsSession; const path, reason: string;
+  out already: Boolean; out err: string): Boolean;
+var
+  body, env, d: TJSONObject;
+begin
+  Result := False;
+  already := False;
+  err := '';
+  body := TJSONObject.Create;
+  try
+    if Trim(reason) <> '' then
+      body.Add('reason', Copy(Trim(reason), 1, 500));
+    try
+      env := sess.Client.PostJSONObj(path, body);
+      try
+        d := CsData(env);
+        already := d.Get('alreadyFlagged', False);
+        Result := True; // no exception => 200/201, report is on file
+      finally
+        env.Free;
+      end;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function FlagEntry(sess: TCsSession; const postId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+begin
+  Result := PostFlag(sess, '/v1/posts/' + postId + '/flag', reason, already, err);
+end;
+
+function FlagReply(sess: TCsSession; const replyId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+begin
+  Result := PostFlag(sess, '/v1/replies/' + replyId + '/flag', reason, already, err);
+end;
+
+function FlagChatMessage(sess: TCsSession; const roomId, messageId, reason: string;
+  out already: Boolean; out err: string): Boolean;
+begin
+  Result := PostFlag(sess, '/v1/circ/' + roomId + '/messages/' + messageId + '/flag',
+    reason, already, err);
 end;
 
 end.
