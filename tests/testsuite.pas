@@ -199,7 +199,7 @@ begin
 
   doc := RenderMarkdown('a *b* c', 80);
   EqS(LineText(doc[0]), 'a b c', 'md: * stripped');
-  EqB(FindRun(doc, 'b', r) and r.Underline, True, 'md: * -> italic/underline');
+  EqB(FindRun(doc, 'b', r) and r.Italic and (not r.Underline), True, 'md: * -> italic (not underline)');
 
   doc := RenderMarkdown('a `b` c', 80);
   EqB(FindRun(doc, 'b', r) and (r.Pair = cpMeta), True, 'md: `code` -> meta colour');

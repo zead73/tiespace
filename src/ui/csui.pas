@@ -40,7 +40,8 @@ type
     Text: string;
     Pair: Integer;
     Bold: Boolean;
-    Underline: Boolean;
+    Underline: Boolean; // links
+    Italic: Boolean;    // emphasis (real terminal italics)
   end;
   TStyleRuns = array of TStyleRun;
   TStyleLines = array of TStyleRuns;
@@ -58,8 +59,8 @@ function UIGetKey: LongInt;
 procedure DrawText(y, x, pair: Integer; const s: string; bold: Boolean = False);
 { Fill an entire row with a colour pair, text left-aligned, padded to width. }
 procedure DrawBar(y, pair: Integer; const s: string);
-{ Like DrawText but with an underline attribute too (for links / emphasis). }
-procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline: Boolean);
+{ Like DrawText but with underline (links) and italic (emphasis) attributes. }
+procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline, italic: Boolean);
 { Draw a sequence of styled runs left-to-right starting at (y,x). Runs are
   assumed already wrapped to fit; anything past the screen edge is clipped. }
 procedure DrawRuns(y, x: Integer; const runs: TStyleRuns);
@@ -365,7 +366,7 @@ begin
   attrset(chtype(A_NORMAL));
 end;
 
-procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline: Boolean);
+procedure DrawStyled(y, x, pair: Integer; const s: string; bold, underline, italic: Boolean);
 var
   room: Integer;
   txt: string;
@@ -381,6 +382,8 @@ begin
     a := a or chtype(A_BOLD);
   if underline then
     a := a or chtype(A_UNDERLINE);
+  if italic then
+    a := a or (chtype(1) shl (23 + 8)); // A_ITALIC — FPC's ncurses unit omits it
   attrset(a);
   mvaddstr(y, x, PChar(txt));
   attrset(chtype(A_NORMAL));
@@ -395,7 +398,7 @@ begin
   begin
     if cx >= ScreenCols then
       Break;
-    DrawStyled(y, cx, runs[i].Pair, runs[i].Text, runs[i].Bold, runs[i].Underline);
+    DrawStyled(y, cx, runs[i].Pair, runs[i].Text, runs[i].Bold, runs[i].Underline, runs[i].Italic);
     cx := cx + VisibleWidth(runs[i].Text);
   end;
 end;

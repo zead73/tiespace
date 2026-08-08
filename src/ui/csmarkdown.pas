@@ -32,7 +32,7 @@ type
   TSCP = record          // one styled codepoint
     Cp: string;
     Pair: Integer;
-    Bold, Ul: Boolean;
+    Bold, Ul, It: Boolean;
     W: Integer;
   end;
   TSCPArray = array of TSCP;
@@ -40,12 +40,13 @@ type
 { Append text to a run buffer, merging into the previous run if the style
   matches so runs stay coarse. }
 procedure AddRun(var runs: TStyleRuns; const text: string; pair: Integer;
-  bold, underline: Boolean);
+  bold, underline, italic: Boolean);
 begin
   if text = '' then
     Exit;
   if (Length(runs) > 0) and (runs[High(runs)].Pair = pair) and
-     (runs[High(runs)].Bold = bold) and (runs[High(runs)].Underline = underline) then
+     (runs[High(runs)].Bold = bold) and (runs[High(runs)].Underline = underline) and
+     (runs[High(runs)].Italic = italic) then
     runs[High(runs)].Text := runs[High(runs)].Text + text
   else
   begin
@@ -54,6 +55,7 @@ begin
     runs[High(runs)].Pair := pair;
     runs[High(runs)].Bold := bold;
     runs[High(runs)].Underline := underline;
+    runs[High(runs)].Italic := italic;
   end;
 end;
 
@@ -92,8 +94,8 @@ begin
         Inc(j);
       if j <= n then
       begin
-        AddRun(Result, buf, basePair, bold, ital); buf := '';
-        AddRun(Result, Copy(s, i + 1, j - i - 1), cpMeta, False, False);
+        AddRun(Result, buf, basePair, bold, False, ital); buf := '';
+        AddRun(Result, Copy(s, i + 1, j - i - 1), cpMeta, False, False, False);
         i := j + 1;
         Continue;
       end;
@@ -114,8 +116,8 @@ begin
           url := Copy(s, cb + 2, ce - cb - 2);
           if Trim(txt) = '' then
             txt := url;
-          AddRun(Result, buf, basePair, bold, ital); buf := '';
-          AddRun(Result, txt, cpAccent, False, True); // link = accent + underline
+          AddRun(Result, buf, basePair, bold, False, ital); buf := '';
+          AddRun(Result, txt, cpAccent, False, True, False); // link = accent + underline
           i := ce + 1;
           Continue;
         end;
@@ -132,7 +134,7 @@ begin
         Inc(i);
         Continue;
       end;
-      AddRun(Result, buf, basePair, bold, ital); buf := '';
+      AddRun(Result, buf, basePair, bold, False, ital); buf := '';
       bold := not bold;
       Inc(i, 2);
       Continue;
@@ -147,7 +149,7 @@ begin
         Inc(i);
         Continue;
       end;
-      AddRun(Result, buf, basePair, bold, ital); buf := '';
+      AddRun(Result, buf, basePair, bold, False, ital); buf := '';
       ital := not ital;
       Inc(i);
       Continue;
@@ -155,7 +157,7 @@ begin
     buf := buf + s[i];
     Inc(i);
   end;
-  AddRun(Result, buf, basePair, bold, ital);
+  AddRun(Result, buf, basePair, bold, False, ital);
 end;
 
 { Break run text into styled codepoints for wrapping. }
@@ -180,6 +182,7 @@ begin
       Result[High(Result)].Pair := runs[i].Pair;
       Result[High(Result)].Bold := runs[i].Bold;
       Result[High(Result)].Ul := runs[i].Underline;
+      Result[High(Result)].It := runs[i].Italic;
       Result[High(Result)].W := VisibleWidth(piece);
       Inc(bi, blen);
     end;
@@ -220,7 +223,7 @@ var
           EmitLine;
           chunkW := 0;
         end;
-        AddRun(lineRuns, wordScp[m].Text, wordScp[m].Pair, wordScp[m].Bold, wordScp[m].Underline);
+        AddRun(lineRuns, wordScp[m].Text, wordScp[m].Pair, wordScp[m].Bold, wordScp[m].Underline, wordScp[m].Italic);
         Inc(chunkW, VisibleWidth(wordScp[m].Text));
         lineW := chunkW;
       end;
@@ -232,11 +235,11 @@ var
       EmitLine;
     if lineW > 0 then
     begin
-      AddRun(lineRuns, ' ', cpText, False, False);
+      AddRun(lineRuns, ' ', cpText, False, False, False);
       Inc(lineW);
     end;
     for m := 0 to High(wordScp) do
-      AddRun(lineRuns, wordScp[m].Text, wordScp[m].Pair, wordScp[m].Bold, wordScp[m].Underline);
+      AddRun(lineRuns, wordScp[m].Text, wordScp[m].Pair, wordScp[m].Bold, wordScp[m].Underline, wordScp[m].Italic);
     lineW := lineW + wordW;
     SetLength(wordScp, 0);
     wordW := 0;
@@ -263,6 +266,7 @@ begin
       wordScp[kk].Pair := scp[k].Pair;
       wordScp[kk].Bold := scp[k].Bold;
       wordScp[kk].Underline := scp[k].Ul;
+      wordScp[kk].Italic := scp[k].It;
       Inc(wordW, scp[k].W);
     end;
   end;
@@ -297,10 +301,10 @@ var
       else
         p := contP;
       if p <> '' then
-        AddRun(outRuns, p, pPair, False, False);
+        AddRun(outRuns, p, pPair, False, False, False);
       for w := 0 to High(wrapped[r]) do
         AddRun(outRuns, wrapped[r][w].Text, wrapped[r][w].Pair,
-          wrapped[r][w].Bold, wrapped[r][w].Underline);
+          wrapped[r][w].Bold, wrapped[r][w].Underline, wrapped[r][w].Italic);
       SetLength(Result, Length(Result) + 1);
       Result[High(Result)] := outRuns;
     end;
@@ -343,7 +347,7 @@ begin
          AllDashes(Trim(line), '_') then
       begin
         SetLength(body, 0);
-        AddRun(body, HLine(width), cpMeta, False, False);
+        AddRun(body, HLine(width), cpMeta, False, False, False);
         EmitBlock(body, '', '', cpMeta);
         Continue;
       end;
