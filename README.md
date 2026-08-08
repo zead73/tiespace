@@ -43,8 +43,10 @@ remembers the email), session restore, token refresh, `0600` credential file.
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
   `---` rules); `c` reply (to the entry or to a specific reply, nested); `d`
   delete your own entry or reply; `b` bookmark the post; `f` report (flag) an
-  entry/reply; `p` author profile; `i` view post images (shells out to `chafa`);
-  `w` watch/unwatch the thread (a 👁 marks a watched thread)
+  entry/reply; `p` author profile; `i` view post images / image attachments
+  (shells out to `chafa`); `w` watch/unwatch the thread (a 👁 marks a watched
+  thread). Audio/jukebox attachments show as a text line (title · artist · link)
+  since a TUI can't play them
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)

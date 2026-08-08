@@ -118,6 +118,16 @@ begin
   g := PGuild('{"slug":"x","role":"founder","isMember":true}');
   EqS(g.Role, 'founder', 'ParseGuild: role founder');
   EqB(g.IsMember, True, 'ParseGuild: isMember true');
+
+  // attachments (jukebox audio / images)
+  e := PEntry('{"postId":"p9","content":"","attachments":[{"type":"audio",'
+    + '"origin":"youtube","src":"https://y/x","artist":"Eno","title":"Music",'
+    + '"genre":"ambient"}]}');
+  EqI(Length(e.Attachments), 1, 'ParseEntry: attachment parsed');
+  EqS(e.Attachments[0].Kind, 'audio', 'ParseEntry: attachment type');
+  EqS(e.Attachments[0].Title, 'Music', 'ParseEntry: attachment title');
+  EqS(e.Attachments[0].Artist, 'Eno', 'ParseEntry: attachment artist');
+  EqS(e.Attachments[0].Src, 'https://y/x', 'ParseEntry: attachment src');
 end;
 
 procedure TestEntrySummary;
@@ -134,6 +144,10 @@ begin
 
   e := Default(TEntry);
   EqS(EntrySummary(e), '(no title)', 'EntrySummary: empty -> (no title)');
+
+  // an attachment-only post summarises as its track, not "(no title)"
+  e := PEntry('{"attachments":[{"type":"audio","artist":"Eno","title":"Music"}]}');
+  EqS(EntrySummary(e), '🎵 Music — Eno', 'EntrySummary: audio-only -> track label');
 
   // FeedSummary: NSFW masking honours the filter flag.
   e := Default(TEntry); e.Title := 'Hi';

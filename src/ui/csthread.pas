@@ -159,7 +159,7 @@ var
   procedure BuildLines;
   var
     i, textW: Integer;
-    topicsLine, head, indent: string;
+    topicsLine, head, indent, detail: string;
   begin
     SetLength(lines, 0);
     SetLength(lineOwner, 0);
@@ -169,6 +169,15 @@ var
       AppendImages(images, ExtractImages(entry.Content));
       for i := 0 to High(replies) do
         AppendImages(images, ExtractImages(replies[i].Content));
+      // image attachments feed the viewer too
+      for i := 0 to High(entry.Attachments) do
+        if (LowerCase(entry.Attachments[i].Kind) = 'image') and
+           (entry.Attachments[i].Src <> '') then
+        begin
+          SetLength(images, Length(images) + 1);
+          images[High(images)].Alt := '@' + entry.AuthorUsername + ' attachment';
+          images[High(images)].Url := entry.Attachments[i].Src;
+        end;
     end;
     textW := ScreenCols - 2;
     if textW < 8 then
@@ -193,7 +202,21 @@ var
     else if Gated then
       AddLine('🔞 NSFW content hidden — press x to reveal', cpNsfw, False, -1)
     else
+    begin
       AddMarkdown(CleanImageMarkdown(entry.Content), '', -1, textW);
+      // Non-image attachments (audio tracks) shown as text; a TUI can't play them.
+      for i := 0 to High(entry.Attachments) do
+        if LowerCase(entry.Attachments[i].Kind) <> 'image' then
+        begin
+          AddLine('', cpText, False, -1);
+          AddLine(AttachmentSummary(entry.Attachments[i]), cpAccent, True, -1);
+          detail := Trim(entry.Attachments[i].Genre);
+          if entry.Attachments[i].Src <> '' then
+            detail := Trim(detail + '   ' + entry.Attachments[i].Src);
+          if detail <> '' then
+            AddLine('   ' + detail, cpMeta, False, -1);
+        end;
+    end;
 
     if Length(images) > 0 then
     begin

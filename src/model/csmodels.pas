@@ -13,6 +13,16 @@ uses
   fpjson;
 
 type
+  TAttachment = record
+    Kind: string;   // 'audio', 'image', …  (the JSON 'type')
+    Origin: string; // e.g. 'youtube'
+    Src: string;    // media URL
+    Artist: string;
+    Title: string;
+    Genre: string;
+  end;
+  TAttachmentArray = array of TAttachment;
+
   TEntry = record
     PostId: string;
     AuthorId: string;
@@ -22,6 +32,7 @@ type
     Content: string;
     CreatedAt: string;
     Topics: array of string;
+    Attachments: TAttachmentArray;
     RepliesCount: Integer;
     BookmarksCount: Integer;
     IsNSFW: Boolean;
@@ -162,6 +173,9 @@ function EntrySummary(const e: TEntry): string;
   filtering is on, else prefixed "[NSFW] "; plain otherwise. }
 function FeedSummary(const e: TEntry; filterNSFW: Boolean): string;
 
+{ A one-line label for an attachment (audio track, image, …). }
+function AttachmentSummary(const a: TAttachment): string;
+
 { "now", "5m", "3h", "2d", "6w", else an ISO date. Best-effort. }
 function RelativeTime(const isoUtc: string): string;
 
@@ -244,7 +258,8 @@ function ParseEntry(o: TJSONObject): TEntry;
 var
   td: TJSONData;
   t: TJSONArray;
-  i: Integer;
+  ao: TJSONObject;
+  i, k: Integer;
 begin
   Result.PostId := o.Get('postId', '');
   Result.AuthorId := o.Get('authorId', '');
@@ -265,6 +280,25 @@ begin
     SetLength(Result.Topics, t.Count);
     for i := 0 to t.Count - 1 do
       Result.Topics[i] := t.Items[i].AsString;
+  end;
+  // Attachments: audio (jukebox) and images; shape read defensively.
+  td := o.Find('attachments');
+  if (td <> nil) and (td is TJSONArray) then
+  begin
+    t := TJSONArray(td);
+    for i := 0 to t.Count - 1 do
+      if t.Items[i] is TJSONObject then
+      begin
+        ao := TJSONObject(t.Items[i]);
+        k := Length(Result.Attachments);
+        SetLength(Result.Attachments, k + 1);
+        Result.Attachments[k].Kind := ao.Get('type', '');
+        Result.Attachments[k].Origin := ao.Get('origin', '');
+        Result.Attachments[k].Src := ao.Get('src', ao.Get('url', ao.Get('imageUrl', '')));
+        Result.Attachments[k].Artist := DecodeEntities(ao.Get('artist', ''));
+        Result.Attachments[k].Title := DecodeEntities(ao.Get('title', ''));
+        Result.Attachments[k].Genre := ao.Get('genre', '');
+      end;
   end;
 end;
 
@@ -612,6 +646,30 @@ begin
     Result := IntToStr(secs div 86400) + 'd';
 end;
 
+function AttachmentSummary(const a: TAttachment): string;
+var
+  body: string;
+begin
+  if LowerCase(a.Kind) = 'audio' then
+  begin
+    body := Trim(a.Title);
+    if a.Artist <> '' then
+      if body <> '' then
+        body := body + ' — ' + a.Artist
+      else
+        body := a.Artist;
+    if body = '' then
+      body := '(audio)';
+    Result := '🎵 ' + body;
+  end
+  else if LowerCase(a.Kind) = 'image' then
+    Result := '🖼 image'
+  else if a.Kind <> '' then
+    Result := '📎 ' + a.Kind
+  else
+    Result := '📎 attachment';
+end;
+
 function EntrySummary(const e: TEntry): string;
 var
   p: Integer;
@@ -634,7 +692,11 @@ begin
   while (s <> '') and (s[1] in ['#', '>', '-', '*', ' ']) do
     Delete(s, 1, 1);
   if Trim(s) = '' then
+  begin
+    if Length(e.Attachments) > 0 then
+      Exit(AttachmentSummary(e.Attachments[0])); // e.g. a music-only post
     Exit('(no title)');
+  end;
   Result := Trim(s);
 end;
 
