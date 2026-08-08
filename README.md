@@ -45,9 +45,10 @@ remembers the email), session restore, token refresh, `0600` credential file.
   delete your own entry or reply; `b` bookmark the post; `f` report (flag) an
   entry/reply; `p` author profile; `i` view post images / image attachments
   (shells out to `chafa`); `w` watch/unwatch the thread (a 👁 marks a watched
-  thread). Audio/jukebox attachments show as a text line; `o` plays one in the
-  **background** (shells out to `mpv` + `yt-dlp`) while you keep browsing — the
-  feed header shows what's playing, and `o` there stops it
+  thread). Audio/jukebox attachments show as a numbered text line; `o` plays the
+  first (or `1`–`9` picks a track when a post has several) in the **background**
+  (shells out to `mpv` + `yt-dlp`) while you keep browsing — the feed header
+  shows what's playing, and `o` there stops it
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)

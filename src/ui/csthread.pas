@@ -158,7 +158,7 @@ var
 
   procedure BuildLines;
   var
-    i, textW: Integer;
+    i, textW, ac, naudio: Integer;
     topicsLine, head, indent, detail: string;
   begin
     SetLength(lines, 0);
@@ -204,12 +204,28 @@ var
     else
     begin
       AddMarkdown(CleanImageMarkdown(entry.Content), '', -1, textW);
-      // Non-image attachments (audio tracks) shown as text; a TUI can't play them.
+      // Non-image attachments (audio tracks) as text; numbered when there's more
+      // than one, so o / 1..9 can pick which to play.
+      naudio := 0;
+      for i := 0 to High(entry.Attachments) do
+        if LowerCase(entry.Attachments[i].Kind) = 'audio' then
+          Inc(naudio);
+      ac := 0;
       for i := 0 to High(entry.Attachments) do
         if LowerCase(entry.Attachments[i].Kind) <> 'image' then
         begin
           AddLine('', cpText, False, -1);
-          AddLine(AttachmentSummary(entry.Attachments[i]), cpAccent, True, -1);
+          if LowerCase(entry.Attachments[i].Kind) = 'audio' then
+          begin
+            Inc(ac);
+            if naudio > 1 then
+              AddLine(IntToStr(ac) + '  ' + AttachmentSummary(entry.Attachments[i]),
+                cpAccent, True, -1)
+            else
+              AddLine(AttachmentSummary(entry.Attachments[i]), cpAccent, True, -1);
+          end
+          else
+            AddLine(AttachmentSummary(entry.Attachments[i]), cpAccent, True, -1);
           detail := Trim(entry.Attachments[i].Genre);
           if entry.Attachments[i].Src <> '' then
             detail := Trim(detail + '   ' + entry.Attachments[i].Src);
@@ -371,47 +387,69 @@ var
       err := 'Report failed: ' + lerr;
   end;
 
-  { The post's first playable audio attachment, if any. }
-  function FirstAudio(out url, lbl: string): Boolean;
+  { The n-th (1-based) playable audio attachment, images skipped. }
+  function AudioAt(n: Integer; out url, lbl: string): Boolean;
   var
-    i: Integer;
+    i, c: Integer;
   begin
     Result := False;
+    c := 0;
     for i := 0 to High(entry.Attachments) do
       if (LowerCase(entry.Attachments[i].Kind) = 'audio') and
          (entry.Attachments[i].Src <> '') then
       begin
-        url := entry.Attachments[i].Src;
-        lbl := AttachmentSummary(entry.Attachments[i]);
-        Exit(True);
+        Inc(c);
+        if c = n then
+        begin
+          url := entry.Attachments[i].Src;
+          lbl := AttachmentSummary(entry.Attachments[i]);
+          Exit(True);
+        end;
       end;
   end;
 
-  { Toggle background playback of the post's audio attachment (via mpv). }
-  procedure DoPlayAudio;
+  function AudioCount: Integer;
+  var
+    i: Integer;
+  begin
+    Result := 0;
+    for i := 0 to High(entry.Attachments) do
+      if (LowerCase(entry.Attachments[i].Kind) = 'audio') and
+         (entry.Attachments[i].Src <> '') then
+        Inc(Result);
+  end;
+
+  { Play the n-th audio track in the background, replacing any current one. }
+  procedure PlayTrack(n: Integer);
   var
     url, lbl: string;
   begin
-    if not FirstAudio(url, lbl) then
-    begin
-      err := 'No audio attachment to play.';
-      Exit;
-    end;
-    if IsPlaying and (PlayingUrl = url) then
-    begin
-      StopAudio;
-      err := 'Stopped.';
-    end
-    else if PlayAudio(url, lbl) then
+    if not AudioAt(n, url, lbl) then
+      Exit; // out of range: ignore
+    if PlayAudio(url, lbl) then
       err := 'Playing ▶ ' + lbl
     else
       err := 'Could not start mpv (need mpv + yt-dlp on PATH).';
   end;
 
+  { The `o` key: stop if something's playing, else play the first track. }
+  procedure DoPlayAudio;
+  begin
+    if IsPlaying then
+    begin
+      StopAudio;
+      err := 'Stopped.';
+    end
+    else if AudioCount >= 1 then
+      PlayTrack(1)
+    else
+      err := 'No audio attachment to play.';
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
-    status, selDesc, wtag, hsum, au, al: string;
+    status, selDesc, wtag, hsum: string;
   begin
     visible := ScreenRows - 2;
     if visible < 1 then
@@ -472,11 +510,19 @@ var
         status := status + ' · f flag';
       if Length(images) > 0 then
         status := status + ' · i img';
-      if FirstAudio(au, al) then
-        if IsPlaying and (PlayingUrl = au) then
+      if AudioCount >= 1 then
+        if IsPlaying then
           status := status + ' · o stop'
+        else if AudioCount = 1 then
+          status := status + ' · o play'
         else
-          status := status + ' · o play';
+        begin
+          if AudioCount > 9 then
+            i := 9
+          else
+            i := AudioCount;
+          status := status + ' · 1-' + IntToStr(i) + ' play';
+        end;
       if cursor <> '' then
         status := status + ' · m more';
       status := status + ' · q back';
@@ -563,6 +609,8 @@ begin
         DoFlag;
       Ord('o'):
         DoPlayAudio;
+      Ord('1')..Ord('9'):
+        PlayTrack(key - Ord('0'));
       Ord('x'):
         if sess.FilterNSFW and entry.IsNSFW then
         begin
