@@ -45,8 +45,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
   delete your own entry or reply; `b` bookmark the post; `f` report (flag) an
   entry/reply; `p` author profile; `i` view post images / image attachments
   (shells out to `chafa`); `w` watch/unwatch the thread (a 👁 marks a watched
-  thread). Audio/jukebox attachments show as a text line (title · artist · link)
-  since a TUI can't play them
+  thread). Audio/jukebox attachments show as a text line; `o` plays one in the
+  **background** (shells out to `mpv` + `yt-dlp`) while you keep browsing — the
+  feed header shows what's playing, and `o` there stops it
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
@@ -105,7 +106,8 @@ and either way the binary links and runs.
 ## Platforms
 
 Native on **Linux** and the **BSDs** — anywhere with FPC 3.2.2, wide ncurses,
-OpenSSL, and (for images) `chafa`. There is **no native Windows build**: the UI
+OpenSSL, and (optional) `chafa` for images plus `mpv` + `yt-dlp` for playing
+audio attachments. There is **no native Windows build**: the UI
 is built on ncurses and a few POSIX calls (`wcwidth`, Unix file-mode bits,
 `fpSystem`), so on Windows you run it under **WSL**.
 

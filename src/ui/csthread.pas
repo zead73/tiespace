@@ -21,7 +21,7 @@ implementation
 
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsUI, CsMarkdown, CsApi, CsRateLimit,
-  CsCompose, CsImage, CsProfile;
+  CsCompose, CsImage, CsProfile, CsPlayer;
 
 const
   PAGE = 50;
@@ -371,10 +371,47 @@ var
       err := 'Report failed: ' + lerr;
   end;
 
+  { The post's first playable audio attachment, if any. }
+  function FirstAudio(out url, lbl: string): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := False;
+    for i := 0 to High(entry.Attachments) do
+      if (LowerCase(entry.Attachments[i].Kind) = 'audio') and
+         (entry.Attachments[i].Src <> '') then
+      begin
+        url := entry.Attachments[i].Src;
+        lbl := AttachmentSummary(entry.Attachments[i]);
+        Exit(True);
+      end;
+  end;
+
+  { Toggle background playback of the post's audio attachment (via mpv). }
+  procedure DoPlayAudio;
+  var
+    url, lbl: string;
+  begin
+    if not FirstAudio(url, lbl) then
+    begin
+      err := 'No audio attachment to play.';
+      Exit;
+    end;
+    if IsPlaying and (PlayingUrl = url) then
+    begin
+      StopAudio;
+      err := 'Stopped.';
+    end
+    else if PlayAudio(url, lbl) then
+      err := 'Playing ▶ ' + lbl
+    else
+      err := 'Could not start mpv (need mpv + yt-dlp on PATH).';
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
-    status, selDesc, wtag, hsum: string;
+    status, selDesc, wtag, hsum, au, al: string;
   begin
     visible := ScreenRows - 2;
     if visible < 1 then
@@ -435,6 +472,11 @@ var
         status := status + ' · f flag';
       if Length(images) > 0 then
         status := status + ' · i img';
+      if FirstAudio(au, al) then
+        if IsPlaying and (PlayingUrl = au) then
+          status := status + ' · o stop'
+        else
+          status := status + ' · o play';
       if cursor <> '' then
         status := status + ' · m more';
       status := status + ' · q back';
@@ -519,6 +561,8 @@ begin
         DoWatchToggle;
       Ord('f'):
         DoFlag;
+      Ord('o'):
+        DoPlayAudio;
       Ord('x'):
         if sess.FilterNSFW and entry.IsNSFW then
         begin

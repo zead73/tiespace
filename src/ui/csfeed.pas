@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsNotes, CsWatches, CsSettings, CsRateLimit;
+  CsNotes, CsWatches, CsSettings, CsPlayer, CsRateLimit;
 
 const
   PAGE = 25;
@@ -259,7 +259,7 @@ end;
 
   procedure Redraw;
   var
-    status, more: string;
+    status, more, hdr: string;
     i, idx: Integer;
   begin
     visible := ScreenRows - 2;
@@ -277,11 +277,12 @@ end;
       top := 0;
 
     UIErase;
+    hdr := ' tiespace   ·   feed   ·   @' + sess.Username;
     if unread > 0 then
-      DrawBar(0, cpHeader, ' tiespace   ·   feed   ·   @' + sess.Username +
-        '   ·   ' + IntToStr(unread) + ' unread notifs (n)')
-    else
-      DrawBar(0, cpHeader, ' tiespace   ·   feed   ·   @' + sess.Username);
+      hdr := hdr + '   ·   ' + IntToStr(unread) + ' unread notifs (n)';
+    if IsPlaying then
+      hdr := hdr + '   ·   ▶ ' + NowPlaying + ' (o stop)';
+    DrawBar(0, cpHeader, hdr);
 
     for i := 0 to visible - 1 do
     begin
@@ -419,6 +420,12 @@ begin
         begin
           RunSettings(sess);
           err := '';
+        end;
+      Ord('o'):
+        if IsPlaying then
+        begin
+          StopAudio;
+          err := 'Stopped playback.';
         end;
       Ord('p'):
         if (sel >= 0) and (sel <= High(entries)) then
