@@ -23,7 +23,7 @@ BIN    = bin
 all: app test
 
 app: dirs
-	$(FPC) $(FLAGS) -o$(BIN)/cyberspace src/cyberspace.pas
+	$(FPC) $(FLAGS) -o$(BIN)/tiespace src/tiespace.pas
 
 spike: dirs
 	$(FPC) $(FLAGS) -o$(BIN)/spike_login src/spikes/spike_login.pas

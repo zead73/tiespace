@@ -1,4 +1,4 @@
-program cyberspace;
+program tiespace;
 
 (* tiespace -- a human-driven TUI client for the Cyberspace API.
 

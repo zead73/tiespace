@@ -84,13 +84,13 @@ Requires: `fpc` 3.2.2, system OpenSSL 3, and wide ncurses (`ncursesw`).
 
 ```bash
 make           # builds the client and runs the tests (app + test)
-make app       # just the client -> bin/cyberspace
+make app       # just the client -> bin/tiespace
 make test      # builds + runs the pure-function unit tests
 make spike     # bin/spike_login   (M0 transport check)
 make session   # bin/session_test  (session/refresh harness)
 ```
 
-Run `./bin/cyberspace` after logging in once (see below).
+Run `./bin/tiespace` after logging in once (see below).
 
 `make test` runs a no-network, no-terminal suite over the parsers, HTML-entity
 decoding, the rate limiter, and the wcwidth/UTF-8 layout helpers; it exits
@@ -130,7 +130,7 @@ image, a few hundred MB once the compiler and libraries are added.
 3. **Build and run:**
    ```sh
    git clone https://github.com/zead73/tiespace
-   cd tiespace && make app && ./bin/cyberspace
+   cd tiespace && make app && ./bin/tiespace
    ```
 
 Images: if `chafa` reports *"unknown file format"* on a `.webp`, its Alpine build
@@ -174,7 +174,7 @@ keyring (libsecret) for stronger at-rest storage if desired.
 Layered, with everything below the UI independent of the TUI toolkit:
 
 ```
-program cyberspace           entry: cthreads first, event loop
+program tiespace             entry: cthreads first, event loop
 ├── app/    session · config(XDG) · ratelimit     tokens, refresh, prefs
 ├── net/    http · sse · jsonutil                  transport, data/error envelope
 ├── api/    one unit per endpoint group            typed Pascal calls
@@ -222,7 +222,7 @@ program cyberspace           entry: cthreads first, event loop
 ```
 Makefile
 src/
-  cyberspace.pas          program entry (restore session -> feed)
+  tiespace.pas            program entry (restore session -> feed)
   net/cshttp.pas          transport: auth, JSON, data/error envelope, GET/POST/PATCH
   app/csconfig.pas        XDG paths + 0600 secret file helpers
   app/cssession.pas       login, refresh, persistence
