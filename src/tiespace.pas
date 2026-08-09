@@ -9,7 +9,12 @@ program tiespace;
 {$mode objfpc}{$H+}
 
 uses
-  {$IFDEF UNIX}cthreads,{$ENDIF}
+  // cwstring: install the libc widestring manager so DefaultSystemCodePage is
+  // UTF-8 (65001), not 0. Without it, fpjson's parser re-encodes parsed strings
+  // via the system codepage, so every non-ASCII char in an API response (CJK,
+  // emoji, curly quotes) came back mangled to '?'. Sending was fine (AsJSON just
+  // concatenates bytes); this only bit the receive path.
+  {$IFDEF UNIX}cthreads, cwstring,{$ENDIF}
   SysUtils, CsHttp, CsConfig, CsSession, CsUI, CsLogin, CsFeed;
 
 const
