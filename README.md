@@ -56,7 +56,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - profile view (`p`): bio, stats, links, the user's entries; `f` follow/unfollow
 - search (`/`): users, entries and replies — opens a hit's thread or profile
 - topics (`t`): browse topics, read the entries filed under one
-- bookmarks: `b` bookmark an entry, `B` open the list (open / remove)
+- bookmarks: `b` bookmark an entry, `B` open the list (rows resolve to the
+  post's `@author · title`; open / remove)
 - guilds (`g`): browse the guild directory, open a guild's forum; `c` start a
   thread, `m` list members, `J`/`L` join / leave (one guild at a time)
 - notes (`N`): private, revisioned notes — `c` new, `e` edit (saves a new

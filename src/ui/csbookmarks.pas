@@ -28,6 +28,7 @@ type
     Kind: string;     // 'post' or 'reply'
     TargetId: string; // postId or replyId
     Display: string;
+    Resolved: Boolean; // False when Display is just the id (needs a lazy fetch)
   end;
   TBookmarkArray = array of TBookmark;
 
@@ -78,9 +79,14 @@ begin
       Result.Display := Result.Display + Trim(DecodeEntities(title))
     else
       Result.Display := Result.Display + FirstLine(content);
+    Result.Resolved := True;
   end
   else
+  begin
+    // No embedded post/reply — fall back to the id and resolve it lazily.
     Result.Display := '[' + Result.Kind + ']  ' + Result.TargetId;
+    Result.Resolved := False;
+  end;
 end;
 
 function FetchBookmarks(sess: TCsSession; const cursor: string;
@@ -197,6 +203,27 @@ var
       err := 'Remove failed: ' + rerr;
   end;
 
+  { Fill a row's Display from its target post/reply, once. On-screen rows only. }
+  procedure Resolve(idx: Integer);
+  var
+    e: TEntry;
+    r: TReply;
+    ferr: string;
+  begin
+    if (idx < 0) or (idx > High(items)) or items[idx].Resolved then
+      Exit;
+    items[idx].Resolved := True; // one attempt; keep the id fallback on failure
+    if items[idx].TargetId = '' then
+      Exit;
+    if items[idx].Kind = 'reply' then
+    begin
+      if FetchReplyById(sess, items[idx].TargetId, r, ferr) then
+        items[idx].Display := '@' + r.AuthorUsername + '  ·  ' + FirstLine(r.Content);
+    end
+    else if FetchEntryById(sess, items[idx].TargetId, e, ferr) then
+      items[idx].Display := '@' + e.AuthorUsername + '  ·  ' + EntrySummary(e);
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
@@ -222,14 +249,15 @@ var
       idx := top + i;
       if idx <= High(items) then
       begin
+        Resolve(idx); // lazy: only on-screen rows hit the network, once each
         if idx = sel then
         begin
           DrawBar(1 + i, cpSelect, '');
           DrawText(1 + i, 0, cpSelect, '›');
-          DrawText(1 + i, 2, cpSelect, items[idx].Display);
+          DrawText(1 + i, 2, cpSelect, PadOrTrunc(items[idx].Display, ScreenCols - 3));
         end
         else
-          DrawText(1 + i, 2, cpText, items[idx].Display);
+          DrawText(1 + i, 2, cpText, PadOrTrunc(items[idx].Display, ScreenCols - 3));
       end;
     end;
     if err <> '' then
