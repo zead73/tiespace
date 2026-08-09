@@ -66,9 +66,11 @@ remembers the email), session restore, token refresh, `0600` credential file.
   `x` unwatches (watch/unwatch from inside a thread with `w`)
 - settings (`S`): toggle account preferences — NSFW filter, auto-watch on
   reply, per-type notifications, feed/display switches; `Space` toggles, `s`
-  saves all changes in one request. The top row is a local colour **Theme**
-  (`Space` cycles default / green / amber / magenta / mono; applied live and
-  saved to your config)
+  saves all changes in one request. The top rows are local (client-only) prefs:
+  a colour **Theme** (`Space` cycles default / green / amber / magenta / mono;
+  applied live) and **Keybindings**, an editor that remaps the feed's launcher
+  keys — `Enter` on an action, then press the new key (swaps on collision,
+  navigation keys are reserved). Both are saved to `~/.config/tiespace/`
 - NSFW filtering: with **Filter NSFW** on (Settings), NSFW posts read as
   `[NSFW hidden]` in every list, and an NSFW thread's title/body/images stay
   hidden until you reveal them (`x`, per thread)
@@ -83,8 +85,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 
-**Not yet built**: the remaining M4 polish items — theming, remappable
-keybindings.
+**M4 polish is complete** — notes, settings, watches, richer markdown,
+slash-command help, NSFW handling, theming, and remappable feed keybindings; see
+the checklist in [TODO.md](TODO.md).
 
 ## Build
 
@@ -235,6 +238,7 @@ src/
   net/cshttp.pas          transport: auth, JSON, data/error envelope, GET/POST/PATCH
   app/csconfig.pas        XDG paths + 0600 secret file helpers
   app/cssession.pas       login, refresh, persistence
+  app/cskeymap.pas        remappable feed launcher keys (local, TranslateKey)
   api/csapi.pas           shared fetchers (entry by id/slug, reply, unread count)
   model/csmodels.pas      TEntry/TReply/TNotification + entity decode + time/format
   ui/csui.pas             ncursesw core: colours, wcwidth layout, WrapText

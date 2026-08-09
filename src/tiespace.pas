@@ -15,7 +15,7 @@ uses
   // emoji, curly quotes) came back mangled to '?'. Sending was fine (AsJSON just
   // concatenates bytes); this only bit the receive path.
   {$IFDEF UNIX}cthreads, cwstring,{$ENDIF}
-  SysUtils, CsHttp, CsConfig, CsSession, CsUI, CsLogin, CsFeed;
+  SysUtils, CsHttp, CsConfig, CsSession, CsUI, CsLogin, CsFeed, CsKeyMap;
 
 const
   BASE = 'https://api.cyberspace.online';
@@ -39,6 +39,7 @@ begin
     end;
 
     SetTheme(ThemeIndexByName(LoadThemeName)); // -1 (no saved theme) -> default
+    LoadKeymap; // apply any local feed-keybinding overrides
     UIInit;
     try
       repeat

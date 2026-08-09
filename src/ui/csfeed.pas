@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsNotes, CsWatches, CsSettings, CsPlayer, CsRateLimit;
+  CsNotes, CsWatches, CsSettings, CsPlayer, CsRateLimit, CsKeyMap;
 
 const
   PAGE = 25;
@@ -300,10 +300,13 @@ end;
       else
         more := '';
       if Length(entries) = 0 then
-        status := ' no entries   ·   c post · C chat · g guilds · N notes · ? help · q quit'
+        status := ' no entries   ·   ' + CurrentKey(kaCompose) + ' post · '
+          + CurrentKey(kaCirc) + ' chat · ' + CurrentKey(kaGuilds) + ' guilds · '
+          + CurrentKey(kaNotes) + ' notes · ? help · q quit'
       else
-        status := Format(' %d/%d%s   ·   Enter open · c post · g guilds · N notes · ? help · q quit',
-          [sel + 1, Length(entries), more]);
+        status := Format(' %d/%d%s   ·   Enter open · ', [sel + 1, Length(entries), more])
+          + CurrentKey(kaCompose) + ' post · ' + CurrentKey(kaGuilds) + ' guilds · '
+          + CurrentKey(kaNotes) + ' notes · ? help · q quit';
       DrawBar(ScreenRows - 1, cpStatus, status);
     end;
     UIRefresh;
@@ -316,7 +319,7 @@ begin
   LoadFirst;
   repeat
     Redraw;
-    key := UIGetKey;
+    key := TranslateKey(UIGetKey); // apply any remapped feed launcher keys
     case key of
       Ord('q'), 27:
         Break;

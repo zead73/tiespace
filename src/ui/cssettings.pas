@@ -19,10 +19,10 @@ procedure RunSettings(sess: TCsSession);
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsConfig, CsRateLimit;
+  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsConfig, CsRateLimit, CsKeys;
 
 type
-  TSetKind = (skBool, skNotif, skTheme);
+  TSetKind = (skBool, skNotif, skTheme, skKeys);
   TSetItem = record
     Key: string;      // JSON key (top-level) or notifications sub-key
     Caption: string;
@@ -74,8 +74,9 @@ var
   begin
     SetLength(items, 0);
     err := '';
-    // A local (client-side) appearance pref, not a server setting.
+    // Local (client-side) prefs, not server settings.
     AddItem('__theme__', 'Theme', skTheme, False);
+    AddItem('__keys__', 'Keybindings', skKeys, False);
     try
       env := sess.Client.GetJSONObj('/v1/settings');
       try
@@ -122,6 +123,14 @@ var
       SetTheme((CurrentThemeIndex + 1) mod ThemeCount);
       SaveThemeName(ThemeName(CurrentThemeIndex));
       flash := 'Theme: ' + ThemeName(CurrentThemeIndex);
+      flashErr := False;
+      Exit;
+    end;
+    if items[sel].Kind = skKeys then
+    begin
+      // Open the keybindings editor; it saves its own changes locally.
+      RunKeybindings;
+      flash := '';
       flashErr := False;
       Exit;
     end;
@@ -215,6 +224,8 @@ var
       begin
         if items[idx].Kind = skTheme then
           row := 'Theme:  ' + ThemeName(CurrentThemeIndex) + '   (Space cycles)'
+        else if items[idx].Kind = skKeys then
+          row := 'Keybindings…   (Enter to edit feed keys)'
         else
         begin
           if items[idx].Value then

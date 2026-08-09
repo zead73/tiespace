@@ -17,7 +17,9 @@ program testsuite;
 
 uses
   clocale, SysUtils, fpjson, jsonparser,
-  CsModels, CsRateLimit, CsUI, CsMarkdown;
+  CsModels, CsRateLimit, CsUI, CsMarkdown, CsKeyMap;
+
+function setenv(name, value: PChar; overwrite: LongInt): LongInt; cdecl; external 'c';
 
 var
   gPass, gFail, gSkip: Integer;
@@ -315,6 +317,55 @@ begin
   EqS(m.Content, 'YWJj', 'ParseChatMessage: non-art content untouched');
 end;
 
+procedure TestKeymap;
+var
+  d: string;
+begin
+  // Hermetic: point config writes at a temp dir so `make` never rewrites the
+  // real ~/.config/tiespace/keys.
+  d := IncludeTrailingPathDelimiter(GetTempDir) + 'tiespace-keymap-test';
+  ForceDirectories(d);
+  setenv('XDG_CONFIG_HOME', PChar(d), 1);
+  ResetAll; // clean slate
+
+  EqI(ActionCount, 16, 'keymap: 16 actions');
+  EqB(DefaultKey(kaGuilds) = 'g', True, 'keymap: guilds default is g');
+  EqB(CurrentKey(kaGuilds) = 'g', True, 'keymap: no override -> default');
+  EqB(IsReserved('j'), True, 'keymap: j is reserved');
+  EqB(IsReserved('x'), False, 'keymap: x is not reserved');
+
+  // No overrides: managed keys are identity, everything else passes through.
+  EqI(TranslateKey(Ord('g')), Ord('g'), 'keymap: managed identity');
+  EqI(TranslateKey(Ord('j')), Ord('j'), 'keymap: unmanaged passthrough');
+  EqI(TranslateKey(258), 258, 'keymap: non-printable passthrough');
+
+  // Rebind guilds g->z: z fires guilds; g is now an orphaned no-op.
+  Rebind(kaGuilds, 'z');
+  EqB(CurrentKey(kaGuilds) = 'z', True, 'keymap: rebind sets current key');
+  EqI(TranslateKey(Ord('z')), Ord('g'), 'keymap: z translates to guilds');
+  EqI(TranslateKey(Ord('g')), -2, 'keymap: orphaned default is a no-op');
+
+  // Rebind topics onto z (held by guilds): they swap, guilds takes topics old t.
+  Rebind(kaTopics, 'z');
+  EqB(CurrentKey(kaTopics) = 'z', True, 'keymap: swap sets target');
+  EqB(CurrentKey(kaGuilds) = 't', True, 'keymap: swap hands back old key');
+  EqI(TranslateKey(Ord('z')), Ord('t'), 'keymap: z now fires topics');
+  EqI(TranslateKey(Ord('t')), Ord('g'), 'keymap: t now fires guilds');
+
+  // Reserved / no-change rebinds are rejected.
+  Rebind(kaNotes, 'j');
+  EqB(CurrentKey(kaNotes) = 'N', True, 'keymap: reserved rebind rejected');
+
+  // Overrides survive a save/load round-trip.
+  LoadKeymap;
+  EqB(CurrentKey(kaTopics) = 'z', True, 'keymap: override persisted');
+  EqB(CurrentKey(kaGuilds) = 't', True, 'keymap: swapped key persisted');
+
+  ResetAll;
+  LoadKeymap;
+  EqB(CurrentKey(kaGuilds) = 'g', True, 'keymap: reset restores + persists');
+end;
+
 procedure TestTheme;
 begin
   EqB(ThemeCount >= 2, True, 'theme: multiple themes');
@@ -342,6 +393,7 @@ begin
   TestMarkdown;
   TestChatArt;
   TestTheme;
+  TestKeymap;
 
   WriteLn;
   WriteLn(Format('tiespace tests: %d passed, %d failed, %d skipped',

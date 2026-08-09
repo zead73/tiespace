@@ -60,7 +60,13 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       cycled from the Settings screen's top row, applied live, saved **locally**
       (`~/.config/tiespace/theme`) — not via the server `iconTheme`, which is the
       website's icon set, a different concept. Theme fns unit-tested.
-- [ ] **Keybindings** — remappable keys; can persist via `keyboardBindings`/`keyboardPreset`/Settings
+- [x] **Keybindings** — the feed's launcher keys are remappable from a Settings →
+      Keybindings editor. A translation layer (`CsKeyMap.TranslateKey`) rewrites a
+      pressed key to the bound action's default before the feed's `case` sees it,
+      so feed dispatch is unchanged and it's a no-op identity until you remap.
+      Rebinds swap on collision, reject reserved nav keys, and save **locally**
+      (`~/.config/tiespace/keys`) — not via server `keyboardBindings`. In-view nav
+      keys stay fixed. Keymap logic unit-tested (translate/swap/orphan/round-trip).
 
 ## Notes on ordering
 
