@@ -85,6 +85,7 @@ type
     Timestamp: Int64;
     IsChatAdmin: Boolean;
     IsAction: Boolean;
+    IsArt: Boolean;   // /art: Content is decoded ASCII art, render verbatim
     Deleted: Boolean;
     ImageUrl: string;
     GifUrl: string;
@@ -185,7 +186,7 @@ function DecodeEntities(const s: string): string;
 implementation
 
 uses
-  SysUtils, DateUtils;
+  SysUtils, DateUtils, base64;
 
 { Encode a Unicode codepoint as UTF-8 bytes. }
 function CpToUtf8(cp: Cardinal): string;
@@ -444,19 +445,57 @@ begin
   SetLength(Result, n);
 end;
 
+{ Whether a message's `style` is (or includes) "art". `style` is a string or an
+  array of style names. }
+function StyleHasArt(o: TJSONObject): Boolean;
+var
+  sd: TJSONData;
+  a: TJSONArray;
+  i: Integer;
+begin
+  Result := False;
+  sd := o.Find('style');
+  if sd = nil then
+    Exit;
+  if sd.JSONType = jtString then
+    Result := LowerCase(sd.AsString) = 'art'
+  else if sd is TJSONArray then
+  begin
+    a := TJSONArray(sd);
+    for i := 0 to a.Count - 1 do
+      if (a.Items[i].JSONType = jtString) and (LowerCase(a.Items[i].AsString) = 'art') then
+        Exit(True);
+  end;
+end;
+
 function ParseChatMessage(o: TJSONObject): TChatMessage;
+var
+  raw: string;
 begin
   Result.Id := o.Get('id', '');
   // cIRC uses userId/username; C-Mail uses senderId/senderUsername.
   Result.UserId := o.Get('userId', o.Get('senderId', ''));
   Result.Username := o.Get('username', o.Get('senderUsername', ''));
-  Result.Content := DecodeEntities(o.Get('content', ''));
   Result.Timestamp := o.Get('timestamp', Int64(0));
   Result.IsChatAdmin := o.Get('isChatAdmin', False);
   Result.IsAction := o.Get('isAction', False);
   Result.Deleted := o.Get('deleted', False);
   Result.ImageUrl := o.Get('imageUrl', '');
   Result.GifUrl := o.Get('gifUrl', '');
+  raw := o.Get('content', '');
+  // A /art message stores its content base64-encoded (deletion strips the style).
+  Result.IsArt := (not Result.Deleted) and StyleHasArt(o);
+  if Result.IsArt then
+  begin
+    try
+      Result.Content := DecodeStringBase64(raw); // ASCII art: keep bytes as-is
+    except
+      Result.Content := raw; // not valid base64 after all
+      Result.IsArt := False;
+    end;
+  end
+  else
+    Result.Content := DecodeEntities(raw);
 end;
 
 function ParseChatMessageArray(a: TJSONArray): TChatMessageArray;

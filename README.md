@@ -74,8 +74,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),
   send + IRC slash-commands (`/help` shows the command reference), scrollback,
   live online-users panel (idle users shown asleep, `💤`) + presence heartbeat
-  that reports your own activity; in select mode (`Tab`), `d` deletes your own
-  message, `i` views a message's image, and `f` reports a message
+  that reports your own activity; `/art` ASCII-art posts are base64-decoded and
+  rendered verbatim; in select mode (`Tab`), `d` deletes your own message, `i`
+  views a message's image, and `f` reports a message
 - C-Mail (`M`): conversation list, start new by username, live DM stream, send,
   mark-read, and typing indicators (both directions)
 

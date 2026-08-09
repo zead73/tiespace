@@ -222,6 +222,26 @@ var
       lineMsg[High(lineMsg)] := mi;
     end;
 
+    { ASCII art: one display line per source line, verbatim — never word-wrapped,
+      leading spaces kept (they're the picture). Over-wide lines clip on the right. }
+    procedure AddArt(const s: string; mi: Integer);
+    var
+      p, q: Integer;
+    begin
+      p := 1;
+      while p <= Length(s) do
+      begin
+        q := p;
+        while (q <= Length(s)) and (s[q] <> #10) and (s[q] <> #13) do
+          Inc(q);
+        AddML('  ' + Copy(s, p, q - p), cpText, False, mi);
+        if (q < Length(s)) and (s[q] = #13) and (s[q + 1] = #10) then
+          p := q + 2
+        else
+          p := q + 1;
+      end;
+    end;
+
   begin
     SetLength(lines, 0);
     SetLength(lineMsg, 0);
@@ -252,9 +272,14 @@ var
           content := '';
         if content <> '' then
         begin
-          wrapped := WrapText(content, textW - 2);
-          for j := 0 to High(wrapped) do
-            AddML('  ' + wrapped[j], cpText, False, i);
+          if msgs[i].IsArt then
+            AddArt(content, i)
+          else
+          begin
+            wrapped := WrapText(content, textW - 2);
+            for j := 0 to High(wrapped) do
+              AddML('  ' + wrapped[j], cpText, False, i);
+          end;
         end;
         if msgs[i].ImageUrl <> '' then
           AddML('  🖼 [image]', cpMeta, False, i);

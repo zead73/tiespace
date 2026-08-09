@@ -295,6 +295,26 @@ begin
   EqS(TruncEllipsis('hi', 5), 'hi', 'TruncEllipsis: no-op when it fits');
 end;
 
+procedure TestChatArt;
+var
+  m: TChatMessage;
+  o: TJSONObject;
+begin
+  o := TJSONObject(GetJSON('{"username":"a","style":"art","content":"YWJj"}'));
+  m := ParseChatMessage(o); o.Free; // "YWJj" = base64("abc")
+  EqB(m.IsArt, True, 'ParseChatMessage: art detected');
+  EqS(m.Content, 'abc', 'ParseChatMessage: base64 art decoded');
+
+  o := TJSONObject(GetJSON('{"username":"a","style":["art"],"content":"YWJj"}'));
+  m := ParseChatMessage(o); o.Free;
+  EqB(m.IsArt, True, 'ParseChatMessage: art in style array');
+
+  o := TJSONObject(GetJSON('{"username":"a","content":"YWJj"}'));
+  m := ParseChatMessage(o); o.Free;
+  EqB(m.IsArt, False, 'ParseChatMessage: non-art not flagged');
+  EqS(m.Content, 'YWJj', 'ParseChatMessage: non-art content untouched');
+end;
+
 begin
   gPass := 0; gFail := 0; gSkip := 0;
 
@@ -305,6 +325,7 @@ begin
   TestRateLimit;
   TestLayout;
   TestMarkdown;
+  TestChatArt;
 
   WriteLn;
   WriteLn(Format('tiespace tests: %d passed, %d failed, %d skipped',
