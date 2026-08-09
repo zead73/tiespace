@@ -315,6 +315,21 @@ begin
   EqS(m.Content, 'YWJj', 'ParseChatMessage: non-art content untouched');
 end;
 
+procedure TestTheme;
+begin
+  EqB(ThemeCount >= 2, True, 'theme: multiple themes');
+  EqS(ThemeName(0), 'default', 'theme: first is default');
+  EqI(ThemeIndexByName('green'), 1, 'theme: index by name');
+  EqI(ThemeIndexByName('nope'), -1, 'theme: unknown -> -1');
+  SetTheme(2);
+  EqI(CurrentThemeIndex, 2, 'theme: SetTheme sets index');
+  SetTheme(-1);
+  EqI(CurrentThemeIndex, 0, 'theme: clamps below 0');
+  SetTheme(999);
+  EqI(CurrentThemeIndex, ThemeCount - 1, 'theme: clamps to last');
+  SetTheme(0); // restore default
+end;
+
 begin
   gPass := 0; gFail := 0; gSkip := 0;
 
@@ -326,6 +341,7 @@ begin
   TestLayout;
   TestMarkdown;
   TestChatArt;
+  TestTheme;
 
   WriteLn;
   WriteLn(Format('tiespace tests: %d passed, %d failed, %d skipped',

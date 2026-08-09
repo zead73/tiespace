@@ -19,10 +19,10 @@ procedure RunSettings(sess: TCsSession);
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsRateLimit;
+  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsConfig, CsRateLimit;
 
 type
-  TSetKind = (skBool, skNotif);
+  TSetKind = (skBool, skNotif, skTheme);
   TSetItem = record
     Key: string;      // JSON key (top-level) or notifications sub-key
     Caption: string;
@@ -74,6 +74,8 @@ var
   begin
     SetLength(items, 0);
     err := '';
+    // A local (client-side) appearance pref, not a server setting.
+    AddItem('__theme__', 'Theme', skTheme, False);
     try
       env := sess.Client.GetJSONObj('/v1/settings');
       try
@@ -114,6 +116,15 @@ var
   begin
     if (sel < 0) or (sel > High(items)) then
       Exit;
+    if items[sel].Kind = skTheme then
+    begin
+      // Cycle the colour theme; applied live and saved locally right away.
+      SetTheme((CurrentThemeIndex + 1) mod ThemeCount);
+      SaveThemeName(ThemeName(CurrentThemeIndex));
+      flash := 'Theme: ' + ThemeName(CurrentThemeIndex);
+      flashErr := False;
+      Exit;
+    end;
     items[sel].Value := not items[sel].Value;
     items[sel].Dirty := not items[sel].Dirty; // back to loaded value clears dirty
   end;
@@ -202,13 +213,18 @@ var
       idx := top + i;
       if idx <= High(items) then
       begin
-        if items[idx].Value then
-          box := '[x] '
+        if items[idx].Kind = skTheme then
+          row := 'Theme:  ' + ThemeName(CurrentThemeIndex) + '   (Space cycles)'
         else
-          box := '[ ] ';
-        row := box + items[idx].Caption;
-        if items[idx].Dirty then
-          row := row + '  *';
+        begin
+          if items[idx].Value then
+            box := '[x] '
+          else
+            box := '[ ] ';
+          row := box + items[idx].Caption;
+          if items[idx].Dirty then
+            row := row + '  *';
+        end;
         if idx = sel then
         begin
           DrawBar(1 + i, cpSelect, '');

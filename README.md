@@ -66,7 +66,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
   `x` unwatches (watch/unwatch from inside a thread with `w`)
 - settings (`S`): toggle account preferences — NSFW filter, auto-watch on
   reply, per-type notifications, feed/display switches; `Space` toggles, `s`
-  saves all changes in one request
+  saves all changes in one request. The top row is a local colour **Theme**
+  (`Space` cycles default / green / amber / magenta / mono; applied live and
+  saved to your config)
 - NSFW filtering: with **Filter NSFW** on (Settings), NSFW posts read as
   `[NSFW hidden]` in every list, and an NSFW thread's title/body/images stay
   hidden until you reveal them (`x`, per thread)

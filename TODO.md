@@ -56,7 +56,10 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
 - [x] **Slash-command help** — `/help` (or `/commands`, `/?`) in a cIRC room opens a
       scrollable static reference of the slash commands (intercepted client-side, posts
       nothing); status line hints `/help cmds`
-- [ ] **Theming** — selectable colour themes; can persist server-side via `iconTheme`/Settings
+- [x] **Theming** — 5 built-in colour themes (default/green/amber/magenta/mono) in CsUI;
+      cycled from the Settings screen's top row, applied live, saved **locally**
+      (`~/.config/tiespace/theme`) — not via the server `iconTheme`, which is the
+      website's icon set, a different concept. Theme fns unit-tested.
 - [ ] **Keybindings** — remappable keys; can persist via `keyboardBindings`/`keyboardPreset`/Settings
 
 ## Notes on ordering

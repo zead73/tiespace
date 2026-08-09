@@ -20,6 +20,10 @@ function ReadFileIfExists(const APath: string; out AContents: string): Boolean;
   password file, where a stray trailing newline would corrupt the password. }
 function ReadRawFile(const APath: string; out AData: string): Boolean;
 
+{ Local UI preference: the chosen colour-theme name ('' if none saved). }
+function LoadThemeName: string;
+procedure SaveThemeName(const AName: string);
+
 implementation
 
 uses
@@ -103,6 +107,23 @@ begin
   finally
     fs.Free;
   end;
+end;
+
+const
+  THEME_FILE = 'theme';
+
+function LoadThemeName: string;
+var
+  s: string;
+begin
+  Result := '';
+  if ReadFileIfExists(ConfigPath(THEME_FILE), s) then
+    Result := Trim(s);
+end;
+
+procedure SaveThemeName(const AName: string);
+begin
+  WriteSecretFile(ConfigPath(THEME_FILE), AName); // 0600 is harmless for a pref
 end;
 
 end.

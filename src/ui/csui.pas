@@ -48,6 +48,15 @@ type
 
 procedure UIInit;
 procedure UIShutdown;
+
+{ Colour themes. Themes recolour the chrome (header/accent/select/…); body text
+  stays the terminal default. SetTheme re-applies the palette live if the UI is
+  up. Index is clamped; ThemeIndexByName returns -1 for an unknown name. }
+function ThemeCount: Integer;
+function ThemeName(i: Integer): string;
+function CurrentThemeIndex: Integer;
+function ThemeIndexByName(const n: string): Integer;
+procedure SetTheme(i: Integer);
 function ScreenRows: Integer;
 function ScreenCols: Integer;
 procedure UIErase;
@@ -234,6 +243,93 @@ begin
     FileWrite(StdOutputHandle, s[1], Length(s));
 end;
 
+type
+  TThemeDef = record
+    Name: string;
+    HdrFg, HdrBg, StFg, StBg: SmallInt;
+    AccFg, MetaFg: SmallInt;      // on the default background
+    SelFg, SelBg: SmallInt;
+    NsfwFg, ErrFg, ErrBg: SmallInt;
+  end;
+
+const
+  // Status stays black-on-white, NSFW red, error white-on-red across themes; the
+  // rest is the theme's "brand". cpText (pair 0) is always the terminal default.
+  THEMES: array[0..4] of TThemeDef = (
+    (Name: 'default'; HdrFg: COLOR_WHITE; HdrBg: COLOR_BLUE;    StFg: COLOR_BLACK; StBg: COLOR_WHITE;
+     AccFg: COLOR_CYAN;    MetaFg: COLOR_YELLOW; SelFg: COLOR_BLACK; SelBg: COLOR_CYAN;
+     NsfwFg: COLOR_RED; ErrFg: COLOR_WHITE; ErrBg: COLOR_RED),
+    (Name: 'green';   HdrFg: COLOR_BLACK; HdrBg: COLOR_GREEN;   StFg: COLOR_BLACK; StBg: COLOR_WHITE;
+     AccFg: COLOR_GREEN;   MetaFg: COLOR_YELLOW; SelFg: COLOR_BLACK; SelBg: COLOR_GREEN;
+     NsfwFg: COLOR_RED; ErrFg: COLOR_WHITE; ErrBg: COLOR_RED),
+    (Name: 'amber';   HdrFg: COLOR_BLACK; HdrBg: COLOR_YELLOW;  StFg: COLOR_BLACK; StBg: COLOR_WHITE;
+     AccFg: COLOR_YELLOW;  MetaFg: COLOR_CYAN;   SelFg: COLOR_BLACK; SelBg: COLOR_YELLOW;
+     NsfwFg: COLOR_RED; ErrFg: COLOR_WHITE; ErrBg: COLOR_RED),
+    (Name: 'magenta'; HdrFg: COLOR_WHITE; HdrBg: COLOR_MAGENTA; StFg: COLOR_BLACK; StBg: COLOR_WHITE;
+     AccFg: COLOR_MAGENTA; MetaFg: COLOR_CYAN;   SelFg: COLOR_BLACK; SelBg: COLOR_MAGENTA;
+     NsfwFg: COLOR_RED; ErrFg: COLOR_WHITE; ErrBg: COLOR_RED),
+    (Name: 'mono';    HdrFg: COLOR_BLACK; HdrBg: COLOR_WHITE;   StFg: COLOR_BLACK; StBg: COLOR_WHITE;
+     AccFg: COLOR_WHITE;   MetaFg: COLOR_WHITE;  SelFg: COLOR_BLACK; SelBg: COLOR_WHITE;
+     NsfwFg: COLOR_RED; ErrFg: COLOR_WHITE; ErrBg: COLOR_RED)
+  );
+
+var
+  GTheme: Integer = 0;
+  GColorReady: Boolean = False; // start_color has run -> init_pair is safe
+
+procedure ApplyThemePairs;
+var
+  t: TThemeDef;
+begin
+  t := THEMES[GTheme];
+  init_pair(cpHeader, t.HdrFg, t.HdrBg);
+  init_pair(cpStatus, t.StFg, t.StBg);
+  init_pair(cpAccent, t.AccFg, -1);
+  init_pair(cpMeta, t.MetaFg, -1);
+  init_pair(cpSelect, t.SelFg, t.SelBg);
+  init_pair(cpNsfw, t.NsfwFg, -1);
+  init_pair(cpError, t.ErrFg, t.ErrBg);
+end;
+
+function ThemeCount: Integer;
+begin
+  Result := Length(THEMES);
+end;
+
+function ThemeName(i: Integer): string;
+begin
+  if (i >= 0) and (i <= High(THEMES)) then
+    Result := THEMES[i].Name
+  else
+    Result := '';
+end;
+
+function CurrentThemeIndex: Integer;
+begin
+  Result := GTheme;
+end;
+
+function ThemeIndexByName(const n: string): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to High(THEMES) do
+    if THEMES[i].Name = n then
+      Exit(i);
+end;
+
+procedure SetTheme(i: Integer);
+begin
+  if i < 0 then
+    i := 0;
+  if i > High(THEMES) then
+    i := High(THEMES);
+  GTheme := i;
+  if GColorReady then
+    ApplyThemePairs; // live re-colour; caller redraws
+end;
+
 procedure UIInit;
 begin
   setlocale(LC_ALL, ''); // adopt the terminal's UTF-8 locale before initscr
@@ -252,13 +348,8 @@ begin
   begin
     start_color;
     use_default_colors;
-    init_pair(cpHeader, COLOR_WHITE, COLOR_BLUE);
-    init_pair(cpStatus, COLOR_BLACK, COLOR_WHITE);
-    init_pair(cpAccent, COLOR_CYAN, -1);
-    init_pair(cpMeta, COLOR_YELLOW, -1);
-    init_pair(cpSelect, COLOR_BLACK, COLOR_CYAN);
-    init_pair(cpNsfw, COLOR_RED, -1);
-    init_pair(cpError, COLOR_WHITE, COLOR_RED);
+    GColorReady := True;
+    ApplyThemePairs; // uses the theme set before UIInit (default if none)
   end;
 end;
 

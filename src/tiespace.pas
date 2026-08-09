@@ -38,6 +38,7 @@ begin
         startupErr := E.Message;
     end;
 
+    SetTheme(ThemeIndexByName(LoadThemeName)); // -1 (no saved theme) -> default
     UIInit;
     try
       repeat
