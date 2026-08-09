@@ -27,8 +27,9 @@ type
     Id: string;       // bookmark document id (for removal)
     Kind: string;     // 'post' or 'reply'
     TargetId: string; // postId or replyId
-    Display: string;
-    Resolved: Boolean; // False when Display is just the id (needs a lazy fetch)
+    Author: string;   // '@name', or '' until resolved
+    Summary: string;  // title / first line, or the id fallback
+    Resolved: Boolean; // False until the target is fetched
   end;
   TBookmarkArray = array of TBookmark;
 
@@ -74,17 +75,18 @@ begin
 
   if author <> '' then
   begin
-    Result.Display := '@' + author + '  ·  ';
+    Result.Author := '@' + author;
     if Trim(title) <> '' then
-      Result.Display := Result.Display + Trim(DecodeEntities(title))
+      Result.Summary := Trim(DecodeEntities(title))
     else
-      Result.Display := Result.Display + FirstLine(content);
+      Result.Summary := FirstLine(content);
     Result.Resolved := True;
   end
   else
   begin
     // No embedded post/reply — fall back to the id and resolve it lazily.
-    Result.Display := '[' + Result.Kind + ']  ' + Result.TargetId;
+    Result.Author := '';
+    Result.Summary := '[' + Result.Kind + ']  ' + Result.TargetId;
     Result.Resolved := False;
   end;
 end;
@@ -218,10 +220,47 @@ var
     if items[idx].Kind = 'reply' then
     begin
       if FetchReplyById(sess, items[idx].TargetId, r, ferr) then
-        items[idx].Display := '@' + r.AuthorUsername + '  ·  ' + FirstLine(r.Content);
+      begin
+        items[idx].Author := '@' + r.AuthorUsername;
+        items[idx].Summary := FirstLine(r.Content);
+      end;
     end
     else if FetchEntryById(sess, items[idx].TargetId, e, ferr) then
-      items[idx].Display := '@' + e.AuthorUsername + '  ·  ' + EntrySummary(e);
+    begin
+      items[idx].Author := '@' + e.AuthorUsername;
+      items[idx].Summary := EntrySummary(e);
+    end;
+  end;
+
+  { A row: fixed-width author column, then a · and the summary, so they line up. }
+  procedure RenderRow(y: Integer; const b: TBookmark; selected: Boolean);
+  const
+    authorX = 2;
+    authorW = 16;
+  var
+    dotX, sumX, sumW: Integer;
+  begin
+    dotX := authorX + authorW + 1;
+    sumX := dotX + 2;
+    sumW := ScreenCols - sumX - 1;
+    if sumW < 4 then
+      sumW := 4;
+    if selected then
+    begin
+      DrawBar(y, cpSelect, '');
+      DrawText(y, 0, cpSelect, '›');
+      DrawText(y, authorX, cpSelect, PadOrTrunc(b.Author, authorW), True);
+      if b.Author <> '' then
+        DrawText(y, dotX, cpSelect, '·');
+      DrawText(y, sumX, cpSelect, PadOrTrunc(b.Summary, sumW));
+    end
+    else
+    begin
+      DrawText(y, authorX, cpAccent, PadOrTrunc(b.Author, authorW), True);
+      if b.Author <> '' then
+        DrawText(y, dotX, cpMeta, '·');
+      DrawText(y, sumX, cpText, PadOrTrunc(b.Summary, sumW));
+    end;
   end;
 
   procedure Redraw;
@@ -250,14 +289,7 @@ var
       if idx <= High(items) then
       begin
         Resolve(idx); // lazy: only on-screen rows hit the network, once each
-        if idx = sel then
-        begin
-          DrawBar(1 + i, cpSelect, '');
-          DrawText(1 + i, 0, cpSelect, '›');
-          DrawText(1 + i, 2, cpSelect, PadOrTrunc(items[idx].Display, ScreenCols - 3));
-        end
-        else
-          DrawText(1 + i, 2, cpText, PadOrTrunc(items[idx].Display, ScreenCols - 3));
+        RenderRow(1 + i, items[idx], idx = sel);
       end;
     end;
     if err <> '' then
