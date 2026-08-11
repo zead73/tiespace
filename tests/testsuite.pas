@@ -317,6 +317,30 @@ begin
   EqS(m.Content, 'YWJj', 'ParseChatMessage: non-art content untouched');
 end;
 
+{ Regression: ParseEntryArray reuses one result temp, and attachments/topics are
+  only set when present — an entry with none must not inherit the previous one's. }
+procedure TestAttachmentLeak;
+var
+  arr: TEntryArray;
+  a: TJSONArray;
+begin
+  a := TJSONArray(GetJSON(
+    '[{"postId":"1","content":"has song","topics":["music"],' +
+       '"attachments":[{"type":"audio","title":"Plantasia","src":"http://x"}]},' +
+     '{"postId":"2","content":"no song","topics":["vent"]},' +
+     '{"postId":"3","content":"also none"}]'));
+  try
+    arr := ParseEntryArray(a);
+    EqI(Length(arr[0].Attachments), 1, 'leak: entry 0 keeps its attachment');
+    EqI(Length(arr[1].Attachments), 0, 'leak: entry 1 does not inherit it');
+    EqI(Length(arr[2].Attachments), 0, 'leak: entry 2 (no fields) is clean');
+    EqI(Length(arr[1].Topics), 1, 'leak: entry 1 keeps its own topics');
+    EqI(Length(arr[2].Topics), 0, 'leak: entry 2 has no topics');
+  finally
+    a.Free;
+  end;
+end;
+
 procedure TestKeymap;
 var
   d: string;
@@ -393,6 +417,7 @@ begin
   TestMarkdown;
   TestChatArt;
   TestTheme;
+  TestAttachmentLeak;
   TestKeymap;
 
   WriteLn;

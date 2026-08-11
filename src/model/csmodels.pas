@@ -262,6 +262,11 @@ var
   ao: TJSONObject;
   i, k: Integer;
 begin
+  // Clear the managed array fields: ParseEntryArray reuses one result temporary
+  // across iterations, and these are only set when their JSON field is present —
+  // so an absent field would otherwise keep the previous entry's data.
+  Result.Topics := nil;
+  Result.Attachments := nil;
   Result.PostId := o.Get('postId', '');
   Result.AuthorId := o.Get('authorId', '');
   Result.AuthorUsername := o.Get('authorUsername', '');
@@ -624,6 +629,7 @@ var
   t: TJSONArray;
   i: Integer;
 begin
+  Result.Topics := nil; // reset: the result temp is reused across ParseNoteArray
   Result.Id := o.Get('id', o.Get('noteId', ''));
   Result.Content := DecodeEntities(o.Get('content', ''));
   Result.CreatedAt := o.Get('createdAt', '');
