@@ -241,6 +241,15 @@ begin
   doc := RenderMarkdown('snake_case_name', 80);
   EqS(LineText(doc[0]), 'snake_case_name', 'md: in-word underscores literal');
 
+  // Backslash escapes only real markup openers; otherwise it stays literal so
+  // ASCII/PETSCII art (e.g. a C64 \/\/ cross-hatch) and paths are preserved.
+  doc := RenderMarkdown('\/\/\/\/', 80);
+  EqS(LineText(doc[0]), '\/\/\/\/', 'md: backslash before non-markup kept (art)');
+  doc := RenderMarkdown('\*not bold\*', 80);
+  EqS(LineText(doc[0]), '*not bold*', 'md: backslash still escapes a markup char');
+  doc := RenderMarkdown('C:\Users\me', 80);
+  EqS(LineText(doc[0]), 'C:\Users\me', 'md: backslashes in a path kept');
+
   doc := RenderMarkdown('aaa bbb ccc', 7);
   EqI(Length(doc), 2, 'md: wraps at width');
   EqS(LineText(doc[0]), 'aaa bbb', 'md: wrap line 1');

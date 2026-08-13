@@ -81,7 +81,9 @@ begin
   buf := '';
   while i <= n do
   begin
-    if (s[i] = '\') and (i < n) then // escaped char -> literal
+    // Backslash escapes only our real markup openers (`, [, *, _). A '\' before
+    // anything else stays literal, so ASCII/PETSCII art like \/\/\/ survives.
+    if (s[i] = '\') and (i < n) and (s[i + 1] in ['`', '[', '*', '_']) then
     begin
       buf := buf + s[i + 1];
       Inc(i, 2);
