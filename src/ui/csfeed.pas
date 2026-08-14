@@ -62,13 +62,17 @@ var
   cursor, nextCursor, err, derr, bid: string;
   sel, top, visible, key: LongInt;
   unread: Integer;
+  unreadExact: Boolean;
 
   procedure RefreshUnread;
   var
     uerr: string;
   begin
-    if not FetchUnreadCount(sess, unread, uerr) then
+    if not FetchUnreadCount(sess, unread, unreadExact, uerr) then
+    begin
       unread := 0;
+      unreadExact := True;
+    end;
   end;
 
   procedure LoadFirst;
@@ -279,7 +283,12 @@ end;
     UIErase;
     hdr := ' tiespace   ·   feed   ·   @' + sess.Username;
     if unread > 0 then
-      hdr := hdr + '   ·   ' + IntToStr(unread) + ' unread notifs (n)';
+    begin
+      if unreadExact then
+        hdr := hdr + '   ·   ' + IntToStr(unread) + ' unread notifs (n)'
+      else
+        hdr := hdr + '   ·   99+ unread notifs (n)';
+    end;
     if IsPlaying then
       hdr := hdr + '   ·   ▶ ' + NowPlaying + ' (o stop)';
     DrawBar(0, cpHeader, hdr);

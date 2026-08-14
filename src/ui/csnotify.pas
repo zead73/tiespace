@@ -66,13 +66,26 @@ end;
 procedure MarkAllRead(sess: TCsSession);
 var
   env: TJSONObject;
+  more: Boolean;
+  guard: Integer;
 begin
-  try
-    env := sess.Client.PostJSONObj('/v1/notifications/read-all', nil);
-    env.Free;
-  except
-    on E: Exception do ;
-  end;
+  // read-all marks up to 5,000 per call and returns hasMore; loop until done.
+  // Capped and best-effort: any error just stops the loop.
+  guard := 0;
+  repeat
+    more := False;
+    Inc(guard);
+    try
+      env := sess.Client.PostJSONObj('/v1/notifications/read-all', nil);
+      try
+        more := CsData(env).Get('hasMore', False);
+      finally
+        env.Free;
+      end;
+    except
+      on E: Exception do more := False;
+    end;
+  until (not more) or (guard >= 40);
 end;
 
 procedure RunNotifications(sess: TCsSession);

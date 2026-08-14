@@ -18,7 +18,8 @@ function FetchEntryBySlug(sess: TCsSession; const username, slug: string;
   out e: TEntry; out err: string): Boolean;
 function FetchReplyById(sess: TCsSession; const id: string;
   out r: TReply; out err: string): Boolean;
-function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string): Boolean;
+function FetchUnreadCount(sess: TCsSession; out count: Integer;
+  out exact: Boolean; out err: string): Boolean;
 
 { Create a top-level entry (content only for now). Returns the new postId. }
 function CreateEntry(sess: TCsSession; const content: string;
@@ -182,18 +183,22 @@ begin
   end;
 end;
 
-function FetchUnreadCount(sess: TCsSession; out count: Integer; out err: string): Boolean;
+function FetchUnreadCount(sess: TCsSession; out count: Integer;
+  out exact: Boolean; out err: string): Boolean;
 var
   env, d: TJSONObject;
 begin
   Result := False;
   count := 0;
+  exact := True; // out params of simple types aren't auto-initialised
   err := '';
   try
     env := sess.Client.GetJSONObj('/v1/notifications/unread-count');
     try
       d := CsData(env);
       count := d.Get('count', 0);
+      // exact=false once >100 unread: count then covers only the newest 100.
+      exact := d.Get('exact', True);
       Result := True;
     finally
       env.Free;
