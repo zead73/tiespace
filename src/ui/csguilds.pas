@@ -4,12 +4,15 @@ unit CsGuilds;
 
    RunGuilds       — the guild directory (most-populated first). Enter opens one.
    RunGuild        — a guild: header + membership + its forum threads. Enter opens
-                     a thread; c starts one; m lists members; J/L join/leave.
+                     a thread; c starts one; m lists members; J/L join/leave;
+                     P makes an apprenticeship your guild.
    RunGuildMembers — the member roster. Enter opens a member's profile.
 
-   A user belongs to at most one guild at a time; the forum itself is open, so
-   anyone can read and start threads regardless of membership. Guild threads are
-   ordinary entries, so opening one reuses the normal thread view. *)
+   Membership (API 0.8.6): one guild you're a *member* of (its icon is your
+   profile badge) plus up to five *apprenticeships*. Joining your first guild
+   makes you a member; each later join is an apprenticeship. The forum is open,
+   so anyone can read and start threads regardless of membership. Guild threads
+   are ordinary entries, so opening one reuses the normal thread view. *)
 
 {$mode objfpc}{$H+}
 
@@ -296,8 +299,12 @@ var
     end;
     RLAdd(header, '', cpText);
     founded := Copy(g.CreatedAt, 1, 10);
-    RLAdd(header, Format('%d members  ·  founded by @%s  ·  %s',
-      [g.MemberCount, g.FounderUsername, founded]), cpMeta);
+    if g.ApprenticeCount > 0 then
+      RLAdd(header, Format('%d members  ·  %d apprentices  ·  founded by @%s  ·  %s',
+        [g.MemberCount, g.ApprenticeCount, g.FounderUsername, founded]), cpMeta)
+    else
+      RLAdd(header, Format('%d members  ·  founded by @%s  ·  %s',
+        [g.MemberCount, g.FounderUsername, founded]), cpMeta);
     if g.Link <> '' then
     begin
       if g.LinkText <> '' then
@@ -305,12 +312,16 @@ var
       else
         RLAdd(header, g.Link, cpMeta);
     end;
+    // Decide state from Role alone (founder/member/apprentice/''); IsMember is
+    // ambiguous for apprentices, so we parse it but don't branch on it here.
     if g.Role = 'founder' then
-      RLAdd(header, '★ founder  (manage on the web)', cpAccent)
-    else if g.IsMember then
-      RLAdd(header, '✓ member  (L to leave)', cpAccent)
+      RLAdd(header, '★ founder  ·  your guild  (manage on the web)', cpAccent)
+    else if g.Role = 'member' then
+      RLAdd(header, '✓ your guild  ·  L leave', cpAccent)
+    else if g.Role = 'apprentice' then
+      RLAdd(header, '◦ apprentice  ·  P make this your guild  ·  L leave', cpAccent)
     else
-      RLAdd(header, 'not a member  (J to join)', cpMeta);
+      RLAdd(header, 'not joined  ·  J join', cpMeta);
     RLAdd(header, HLine(textW), cpMeta);
   end;
 
@@ -341,11 +352,11 @@ var
 
   procedure DoJoin;
   var
-    lerr, jerr, keep: string;
+    lerr, jerr, role, keep: string;
   begin
-    if g.IsMember then
+    if g.Role <> '' then
     begin
-      err := 'You''re already a member.';
+      err := 'You''re already in this guild (' + g.Role + ').';
       Exit;
     end;
     if not Limiter.Check('guild_join', lerr) then
@@ -353,32 +364,66 @@ var
       err := lerr;
       Exit;
     end;
-    if JoinGuild(sess, slug, jerr) then
+    if JoinGuild(sess, slug, role, jerr) then
     begin
       Limiter.Note('guild_join');
-      keep := 'Joined ' + g.Name + ' ✓';
+      if role = 'apprentice' then
+        keep := 'Now an apprentice of ' + g.Name + ' ◦'
+      else
+        keep := g.Name + ' is now your guild ✓';
       LoadGuild;
       err := keep;
     end
     else
-      err := 'Join failed: ' + jerr;
+      err := 'Join failed: ' + jerr; // e.g. 409 at five apprenticeships
+  end;
+
+  procedure DoPromote;
+  var
+    lerr, perr, role, keep: string;
+  begin
+    if g.Role <> 'apprentice' then
+    begin
+      err := 'Only an apprenticeship can be promoted to your guild.';
+      Exit;
+    end;
+    if not UIConfirm('Make ' + g.Name + ' your guild (badge)?') then
+      Exit;
+    if not Limiter.Check('guild_promote', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    if PromoteGuild(sess, slug, role, perr) then
+    begin
+      Limiter.Note('guild_promote');
+      keep := '★ ' + g.Name + ' is now your guild.';
+      LoadGuild;
+      err := keep;
+    end
+    else
+      err := 'Promote failed: ' + perr;
   end;
 
   procedure DoLeave;
   var
-    lerr, lverr, keep: string;
+    lerr, lverr, keep, prompt: string;
   begin
     if g.Role = 'founder' then
     begin
       err := 'Founders manage the guild on the web.';
       Exit;
     end;
-    if not g.IsMember then
+    if g.Role = '' then
     begin
-      err := 'You''re not a member.';
+      err := 'You''re not in this guild.';
       Exit;
     end;
-    if not UIConfirm('Leave ' + g.Name + '?') then
+    if g.Role = 'apprentice' then
+      prompt := 'Leave apprenticeship of ' + g.Name + '?'
+    else
+      prompt := 'Leave ' + g.Name + '?  (clears your guild badge)';
+    if not UIConfirm(prompt) then
       Exit;
     if not Limiter.Check('guild_leave', lerr) then
     begin
@@ -446,7 +491,18 @@ var
   procedure Redraw;
   var
     i, idx: Integer;
+    mLabel: string;
   begin
+    // Membership actions belong in the always-drawn status bar: the header
+    // (which also advertises them) gets truncated on short terminals.
+    if g.Role = 'member' then
+      mLabel := ' · L leave'
+    else if g.Role = 'apprentice' then
+      mLabel := ' · P promote · L leave'
+    else if g.Role = '' then
+      mLabel := ' · J join'
+    else
+      mLabel := ''; // founder: manage on the web
     UIErase;
     DrawBar(0, cpHeader, ' guild   ·   ' + slug);
     hdrH := Length(header);
@@ -484,11 +540,11 @@ var
       DrawBar(ScreenRows - 1, cpStatus, ' could not load guild · r retry · q back')
     else if Length(threads) = 0 then
       DrawBar(ScreenRows - 1, cpStatus,
-        ' no threads yet · c new · m members · r reload · q back')
+        ' no threads yet · c new · m members' + mLabel + ' · r reload · q back')
     else
       DrawBar(ScreenRows - 1, cpStatus,
-        Format(' %d/%d   ·   Enter open · c new · m members · r reload · q back',
-        [sel + 1, Length(threads)]));
+        Format(' %d/%d   ·   Enter open · c new · m members%s · r reload · q back',
+        [sel + 1, Length(threads), mLabel]));
     UIRefresh;
   end;
 
@@ -542,6 +598,8 @@ begin
         DoJoin;
       Ord('L'):
         DoLeave;
+      Ord('P'):
+        DoPromote;
       Ord('r'):
         begin
           err := '';

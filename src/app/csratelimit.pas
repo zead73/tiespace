@@ -65,6 +65,7 @@ begin
     'guild_thread': begin perMin := 2; perDay := 15; end;
     'guild_join': begin perMin := 3; perDay := 15; end;
     'guild_leave': begin perMin := 3; perDay := 15; end;
+    'guild_promote': begin perMin := 3; perDay := 15; end;
     'watch': begin perMin := 10; perDay := 100; end;
     'settings': begin perMin := 2; perDay := 15; end;
     'flag': begin perMin := 5; perDay := 50; end; // shared budget; 20/hr is server-side

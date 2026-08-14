@@ -116,10 +116,16 @@ begin
   EqI(g.MemberCount, 42, 'ParseGuild: memberCount');
   EqB(g.IsMember, False, 'ParseGuild: isMember false');
   EqS(g.Role, '', 'ParseGuild: null role -> empty string');
+  EqI(g.ApprenticeCount, 0, 'ParseGuild: apprenticeCount absent -> 0');
 
   g := PGuild('{"slug":"x","role":"founder","isMember":true}');
   EqS(g.Role, 'founder', 'ParseGuild: role founder');
   EqB(g.IsMember, True, 'ParseGuild: isMember true');
+
+  // 0.8.6 apprenticeships: apprenticeCount present, role can be "apprentice".
+  g := PGuild('{"slug":"y","role":"apprentice","memberCount":9,"apprenticeCount":4}');
+  EqS(g.Role, 'apprentice', 'ParseGuild: role apprentice');
+  EqI(g.ApprenticeCount, 4, 'ParseGuild: apprenticeCount parsed');
 
   // attachments (jukebox audio / images)
   e := PEntry('{"postId":"p9","content":"","attachments":[{"type":"audio",'

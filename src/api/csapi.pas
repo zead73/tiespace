@@ -82,7 +82,10 @@ function FetchGuild(sess: TCsSession; const slug: string;
 function CreateGuildThread(sess: TCsSession; const slug, content: string;
   out postId, err: string; const title: string = '';
   const topics: string = ''): Boolean;
-function JoinGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+function JoinGuild(sess: TCsSession; const slug: string;
+  out role, err: string): Boolean;
+function PromoteGuild(sess: TCsSession; const slug: string;
+  out role, err: string): Boolean;
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
 
 { Notes: private, revisioned. Fetch one (revision 0 = latest); create; update
@@ -735,9 +738,41 @@ begin
   end;
 end;
 
-function JoinGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+{ POST a bodyless guild membership action that returns { role } in its data. }
+function GuildRoleAction(sess: TCsSession; const path: string;
+  out role, err: string): Boolean;
+var
+  env: TJSONObject;
 begin
-  Result := PostNoBody(sess, '/v1/guilds/' + slug + '/join', err);
+  Result := False;
+  role := '';
+  err := '';
+  try
+    env := sess.Client.PostJSONObj(path, nil);
+    try
+      role := CsData(env).Get('role', '');
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function JoinGuild(sess: TCsSession; const slug: string;
+  out role, err: string): Boolean;
+begin
+  // role comes back 'member' (your first guild) or 'apprentice' (the rest).
+  Result := GuildRoleAction(sess, '/v1/guilds/' + slug + '/join', role, err);
+end;
+
+function PromoteGuild(sess: TCsSession; const slug: string;
+  out role, err: string): Boolean;
+begin
+  // Makes an apprenticeship your guild (badge); old guild becomes apprentice.
+  Result := GuildRoleAction(sess, '/v1/guilds/' + slug + '/promote', role, err);
 end;
 
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;

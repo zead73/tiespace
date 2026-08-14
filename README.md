@@ -59,7 +59,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - bookmarks: `b` bookmark an entry, `B` open the list (rows resolve to the
   post's `@author · title`; open / remove)
 - guilds (`g`): browse the guild directory, open a guild's forum; `c` start a
-  thread, `m` list members, `J`/`L` join / leave (one guild at a time)
+  thread, `m` list members, `J`/`L` join / leave. You're a **member** of one
+  guild (its icon is your profile badge) plus up to five **apprenticeships**;
+  `P` promotes an apprenticeship to your member guild
 - notes (`N`): private, revisioned notes — `c` new, `e` edit (saves a new
   revision), `v` browse revision history, `d` delete
 - watched threads (`W`): the threads you watch for replies; Enter opens one,

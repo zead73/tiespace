@@ -113,9 +113,10 @@ type
     Link: string;
     LinkText: string;
     MemberCount: Integer;
+    ApprenticeCount: Integer; // absent on pre-apprenticeship guilds -> 0
     CreatedAt: string;
-    IsMember: Boolean; // only set by Get Guild
-    Role: string;      // 'founder' | 'member' | '' (not a member / list view)
+    IsMember: Boolean; // only set by Get Guild; prefer Role for state decisions
+    Role: string;      // 'founder' | 'member' | 'apprentice' | '' (none/list view)
   end;
   TGuildArray = array of TGuild;
 
@@ -569,6 +570,7 @@ begin
   Result.Link := o.Get('link', '');
   Result.LinkText := o.Get('linkText', '');
   Result.MemberCount := o.Get('memberCount', 0);
+  Result.ApprenticeCount := o.Get('apprenticeCount', 0);
   Result.CreatedAt := o.Get('createdAt', '');
   Result.IsMember := o.Get('isMember', False);
   // role is null when the caller isn't a member -- read it defensively.
