@@ -187,6 +187,11 @@ begin
   Limiter.Note('entry'); Limiter.Note('entry'); // rule 2/min
   EqB(Limiter.Check('entry', m), False, 'RateLimit: 3rd entry within a minute blocked');
   EqB(Limiter.Check('reply', m), True, 'RateLimit: other actions unaffected');
+
+  // Per-hour rule (poke = 1/hour, 8/day): one Note blocks the next within the hour.
+  EqB(Limiter.Check('poke', m), True, 'RateLimit: first poke allowed');
+  Limiter.Note('poke');
+  EqB(Limiter.Check('poke', m), False, 'RateLimit: 2nd poke within the hour blocked');
 end;
 
 function LineText(const line: TStyleRuns): string;

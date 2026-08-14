@@ -22,7 +22,7 @@ type
     end;
     procedure Prune;
     function CountSince(const action: string; secs: Integer): Integer;
-    function RuleFor(const action: string; out perMin, perDay: Integer): Boolean;
+    function RuleFor(const action: string; out perMin, perHour, perDay: Integer): Boolean;
   public
     { True if an action of this kind is allowed right now; else False with msg. }
     function Check(const action: string; out msg: string): Boolean;
@@ -47,10 +47,11 @@ begin
   Result := GLimiter;
 end;
 
-function TRateLimiter.RuleFor(const action: string; out perMin, perDay: Integer): Boolean;
+function TRateLimiter.RuleFor(const action: string; out perMin, perHour, perDay: Integer): Boolean;
 begin
   Result := True;
   perMin := 0;
+  perHour := 0; // only per-hour rules set this; leaves existing rules untouched
   perDay := 0;
   case action of
     'entry': begin perMin := 2; perDay := 15; end;
@@ -69,6 +70,7 @@ begin
     'watch': begin perMin := 10; perDay := 100; end;
     'settings': begin perMin := 2; perDay := 15; end;
     'flag': begin perMin := 5; perDay := 50; end; // shared budget; 20/hr is server-side
+    'poke': begin perHour := 1; perDay := 8; end; // across all users, not per user
   else
     Result := False; // no known rule -> unlimited client-side
   end;
@@ -100,16 +102,21 @@ end;
 
 function TRateLimiter.Check(const action: string; out msg: string): Boolean;
 var
-  perMin, perDay: Integer;
+  perMin, perHour, perDay: Integer;
 begin
   msg := '';
   Result := True;
   Prune;
-  if not RuleFor(action, perMin, perDay) then
+  if not RuleFor(action, perMin, perHour, perDay) then
     Exit;
   if (perMin > 0) and (CountSince(action, 60) >= perMin) then
   begin
     msg := Format('Slow down: the %s limit is %d/min. Give it a moment.', [action, perMin]);
+    Exit(False);
+  end;
+  if (perHour > 0) and (CountSince(action, 3600) >= perHour) then
+  begin
+    msg := Format('The %s limit is %d/hour. Try again later.', [action, perHour]);
     Exit(False);
   end;
   if (perDay > 0) and (CountSince(action, 86400) >= perDay) then

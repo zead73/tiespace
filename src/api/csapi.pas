@@ -87,6 +87,8 @@ function JoinGuild(sess: TCsSession; const slug: string;
 function PromoteGuild(sess: TCsSession; const slug: string;
   out role, err: string): Boolean;
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
+{ Poke a user (a nudge notification). }
+function PokeUser(sess: TCsSession; const username: string; out err: string): Boolean;
 
 { Notes: private, revisioned. Fetch one (revision 0 = latest); create; update
   (PATCH creates a new revision); soft-delete. The list and revision history are
@@ -778,6 +780,12 @@ end;
 function LeaveGuild(sess: TCsSession; const slug: string; out err: string): Boolean;
 begin
   Result := PostNoBody(sess, '/v1/guilds/' + slug + '/leave', err);
+end;
+
+function PokeUser(sess: TCsSession; const username: string; out err: string): Boolean;
+begin
+  // Sends a `poke` notification. 400 self, 403 blocked, 404 unknown user.
+  Result := PostNoBody(sess, '/v1/users/' + username + '/poke', err);
 end;
 
 function FetchNote(sess: TCsSession; const id: string; revision: Integer;

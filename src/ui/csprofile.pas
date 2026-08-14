@@ -1,7 +1,8 @@
 unit CsProfile;
 
 (* A user's profile: header (display name, bio, stats, links) above a scrollable,
-   selectable list of their entries. Enter opens an entry's thread; `f` follows. *)
+   selectable list of their entries. Enter opens an entry's thread; `f` follows;
+   `P` pokes (a nudge notification). *)
 
 {$mode objfpc}{$H+}
 
@@ -130,9 +131,9 @@ var
     if (userId <> '') and (userId <> sess.UserId) then
     begin
       if iFollow then
-        RLAdd(header, '✓ following  (f to unfollow)', cpAccent)
+        RLAdd(header, '✓ following  (f to unfollow)  ·  P poke', cpAccent)
       else
-        RLAdd(header, 'not following  (f to follow)', cpMeta);
+        RLAdd(header, 'not following  (f to follow)  ·  P poke', cpMeta);
     end;
     RLAdd(header, HLine(textW), cpMeta);
   end;
@@ -209,6 +210,31 @@ var
       err := ferr;
   end;
 
+  procedure DoPoke;
+  var
+    perr, lerr: string;
+  begin
+    if userId = '' then
+      Exit;
+    if userId = sess.UserId then
+    begin
+      err := 'You can''t poke yourself.';
+      Exit;
+    end;
+    if not Limiter.Check('poke', lerr) then
+    begin
+      err := lerr;
+      Exit;
+    end;
+    if PokeUser(sess, username, perr) then
+    begin
+      Limiter.Note('poke'); // rejected pokes don't count, so only Note on success
+      err := 'Poked @' + username + ' 👉';
+    end
+    else
+      err := 'Poke failed: ' + perr; // 403 blocked / 404 unknown surface here
+  end;
+
   procedure RenderEntryRow(y: Integer; const e: TEntry; selected: Boolean);
   var
     W, sumX, sumW, rightW, rightX: Integer;
@@ -251,10 +277,14 @@ var
     DrawBar(0, cpHeader, ' profile   ·   @' + username);
     if userId = sess.UserId then
       fLabel := ''
-    else if iFollow then
-      fLabel := ' · f unfollow'
     else
-      fLabel := ' · f follow';
+    begin
+      if iFollow then
+        fLabel := ' · f unfollow'
+      else
+        fLabel := ' · f follow';
+      fLabel := fLabel + ' · P poke';
+    end;
 
     hdrH := Length(header);
     if hdrH > ScreenRows - 4 then
@@ -338,6 +368,8 @@ begin
         end;
       Ord('f'):
         DoFollowToggle;
+      Ord('P'):
+        DoPoke;
       Ord('r'):
         begin
           err := '';
