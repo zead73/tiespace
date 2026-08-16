@@ -50,9 +50,32 @@ begin
   end;
 end;
 
+{ A user's guilds (member guild first, then apprenticeships). Best-effort:
+  decorative, so a failure just yields no guilds line. }
+function FetchUserGuilds(sess: TCsSession; const username: string): TGuildArray;
+var
+  env: TJSONObject;
+  d: TJSONData;
+begin
+  SetLength(Result, 0);
+  try
+    env := sess.Client.GetJSONObj('/v1/users/' + username + '/guilds');
+    try
+      d := env.Find('data');
+      if (d <> nil) and (d is TJSONArray) then
+        Result := ParseGuildArray(TJSONArray(d));
+    finally
+      env.Free;
+    end;
+  except
+    on E: Exception do ; // ignore: no guilds line
+  end;
+end;
+
 procedure RunProfile(sess: TCsSession; const username: string);
 var
   entries: TEntryArray;
+  guilds: TGuildArray;
   header: TRenderLines;
   userId, displayName, bio, cursor, nextCursor, err, joined, followId: string;
   followers, following: Integer;
@@ -62,7 +85,7 @@ var
   procedure LoadProfile;
   var
     env, d: TJSONObject;
-    website, wname, wurl, loc, fErr: string;
+    website, wname, wurl, loc, fErr, gline: string;
     wrapped: TTextLines;
     i, textW: Integer;
   begin
@@ -96,6 +119,10 @@ var
     if loaded and (userId <> '') and (userId <> sess.UserId) then
       iFollow := FindFollowing(sess, userId, followId, fErr);
 
+    SetLength(guilds, 0);
+    if loaded then
+      guilds := FetchUserGuilds(sess, username);
+
     SetLength(header, 0);
     textW := ScreenCols - 2;
     if textW < 8 then
@@ -117,6 +144,21 @@ var
     RLAdd(header, '', cpText);
     RLAdd(header, Format('%d followers  ·  %d following  ·  joined %s',
       [followers, following, joined]), cpMeta);
+    if Length(guilds) > 0 then
+    begin
+      RLAdd(header, '', cpText);
+      RLAdd(header, 'guilds', cpAccent);
+      for i := 0 to High(guilds) do
+      begin
+        gline := '';
+        if guilds[i].Icon <> '' then
+          gline := guilds[i].Icon + '  ';
+        gline := gline + guilds[i].Name;
+        if guilds[i].Role <> '' then
+          gline := gline + '  (' + guilds[i].Role + ')';
+        RLAdd(header, '  ' + gline, cpMeta);
+      end;
+    end;
     website := '';
     if wurl <> '' then
     begin

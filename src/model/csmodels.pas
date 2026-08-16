@@ -31,6 +31,7 @@ type
     Slug: string;
     Content: string;
     CreatedAt: string;
+    EditedAt: string; // set once the entry has been edited, else ''
     Topics: array of string;
     Attachments: TAttachmentArray;
     RepliesCount: Integer;
@@ -49,6 +50,7 @@ type
     AuthorUsername: string;
     Content: string;
     CreatedAt: string;
+    EditedAt: string; // set once the reply has been edited, else ''
     Deleted: Boolean;
   end;
   TReplyArray = array of TReply;
@@ -275,6 +277,7 @@ begin
   Result.Slug := o.Get('slug', '');
   Result.Content := DecodeEntities(o.Get('content', ''));
   Result.CreatedAt := o.Get('createdAt', '');
+  Result.EditedAt := o.Get('editedAt', '');
   Result.RepliesCount := o.Get('repliesCount', 0);
   Result.BookmarksCount := o.Get('bookmarksCount', 0);
   Result.IsNSFW := o.Get('isNSFW', False);
@@ -336,6 +339,7 @@ begin
   Result.AuthorUsername := o.Get('authorUsername', '');
   Result.Content := DecodeEntities(o.Get('content', ''));
   Result.CreatedAt := o.Get('createdAt', '');
+  Result.EditedAt := o.Get('editedAt', '');
   Result.Deleted := o.Get('deleted', False);
 end;
 

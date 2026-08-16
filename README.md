@@ -41,7 +41,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
 - thread view: **selectable** entry + replies with **rendered markdown** in
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
-  `---` rules); links show their destination inline (`text → https://…`); `c`
+  `---` rules); links show their destination inline (`text → https://…`); an
+  edited entry or reply is marked `· edited`; `c`
   reply (to the entry or to a specific reply, nested); `d` delete your own entry
   or reply; `b` bookmark the post; `f` report (flag) an entry/reply; `p` author
   profile; `i` view post images / image attachments (shells out to `chafa`); `w`
@@ -55,8 +56,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
 - notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
-- profile view (`p`): bio, stats, links, the user's entries; `f` follow/unfollow,
-  `P` poke (a nudge notification; 1/hour)
+- profile view (`p`): bio, stats, links, the user's guilds (their member guild
+  plus any apprenticeships), and their entries; `f` follow/unfollow, `P` poke (a
+  nudge notification; 1/hour)
 - search (`/`): users, entries and replies — opens a hit's thread or profile
 - topics (`t`): browse topics, read the entries filed under one
 - bookmarks: `b` bookmark an entry, `B` open the list (rows resolve to the

@@ -144,6 +144,15 @@ var
     errOk := False;
   end;
 
+  { "   ·   edited" when the item has an editedAt, else ''. }
+  function EditedTag(const editedAt: string): string;
+  begin
+    if Trim(editedAt) <> '' then
+      Result := '   ·   edited'
+    else
+      Result := '';
+  end;
+
   function SelAuthor: string;
   begin
     if (selReply >= 0) and (selReply <= High(replies)) then
@@ -231,8 +240,8 @@ var
       textW := 8;
 
     // Entry header + body (owner -1).
-    AddLine('@' + entry.AuthorUsername + '   ·   ' + RelativeTime(entry.CreatedAt),
-      cpAccent, True, -1);
+    AddLine('@' + entry.AuthorUsername + '   ·   ' + RelativeTime(entry.CreatedAt)
+      + EditedTag(entry.EditedAt), cpAccent, True, -1);
     if (not Gated) and (Trim(entry.Title) <> '') then
       AddLine(entry.Title, cpText, True, -1);
     if Length(entry.Topics) > 0 then
@@ -304,7 +313,7 @@ var
       else
         indent := '';
       head := '@' + replies[i].AuthorUsername + '   ·   ' +
-        RelativeTime(replies[i].CreatedAt);
+        RelativeTime(replies[i].CreatedAt) + EditedTag(replies[i].EditedAt);
       AddLine(indent + head, cpAccent, False, i);
       if replies[i].Deleted then
         AddLine(indent + '[deleted]', cpMeta, False, i)

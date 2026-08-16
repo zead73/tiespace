@@ -53,6 +53,10 @@ function PEntry(const j: string): TEntry;
 var o: TJSONObject;
 begin o := TJSONObject(GetJSON(j)); try Result := ParseEntry(o); finally o.Free; end; end;
 
+function PReply(const j: string): TReply;
+var o: TJSONObject;
+begin o := TJSONObject(GetJSON(j)); try Result := ParseReply(o); finally o.Free; end; end;
+
 function PNote(const j: string): TNote;
 var o: TJSONObject;
 begin o := TJSONObject(GetJSON(j)); try Result := ParseNote(o); finally o.Free; end; end;
@@ -91,6 +95,15 @@ begin
   EqI(e.RepliesCount, 3, 'ParseEntry: repliesCount');
   EqI(Length(e.Topics), 2, 'ParseEntry: topics length');
   EqB(e.IsPublic, False, 'ParseEntry: isPublic default false');
+  EqS(e.EditedAt, '', 'ParseEntry: editedAt absent -> empty');
+
+  e := PEntry('{"postId":"p2","editedAt":"2026-08-16T00:00:00Z"}');
+  EqS(e.EditedAt, '2026-08-16T00:00:00Z', 'ParseEntry: editedAt parsed');
+
+  EqS(PReply('{"replyId":"r1","content":"hi"}').EditedAt, '',
+    'ParseReply: editedAt absent -> empty');
+  EqS(PReply('{"replyId":"r2","editedAt":"2026-08-16T01:00:00Z"}').EditedAt,
+    '2026-08-16T01:00:00Z', 'ParseReply: editedAt parsed');
 
   // id / revision / updatedAt fall back to their alternates.
   n := PNote('{"noteId":"n2","content":"hi","revisionNumber":5,'
