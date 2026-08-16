@@ -41,7 +41,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
 - thread view: **selectable** entry + replies with **rendered markdown** in
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
-  `---` rules); links show their destination inline (`text → https://…`); an
+  `---` rules); `Space`/`PgDn` scroll a long post (`j`/`k` move between the entry
+  and replies, `g`/`G` jump to top/bottom); links show their destination inline
+  (`text → https://…`); an
   edited entry or reply is marked `· edited`; `c`
   reply (to the entry or to a specific reply, nested); `e` edit your own entry or
   reply's body (see note below); `d` delete your own entry

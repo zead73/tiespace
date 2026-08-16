@@ -622,7 +622,7 @@ var
         selDesc := 'entry'
       else
         selDesc := 'reply @' + replies[selReply].AuthorUsername;
-      status := ' ' + selDesc + '   ·   j/k select · c reply · b bookmark · p profile';
+      status := ' ' + selDesc + '   ·   Space scroll · j/k select · c reply · b bookmark · p profile';
       if watching then
         status := status + ' · w unwatch'
       else
@@ -695,7 +695,7 @@ begin
             Dec(selReply);
           ScrollToSel;
         end;
-      KEY_NPAGE:
+      KEY_NPAGE, Ord(' '): // Space is the discoverable "read more" key
         top := top + visible;
       KEY_PPAGE:
         top := top - visible;
