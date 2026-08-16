@@ -65,7 +65,7 @@ var
   lineOwner: array of Integer; // -2 non-selectable, -1 entry, k = reply k
   images: TImageRefs;
   top, visible, key, lastCols, selReply: Integer;
-  watching, revealed: Boolean;
+  watching, revealed, errOk: Boolean; // errOk: message is success/info, not an error
 
   { An NSFW entry whose content is currently masked (filtering on, not revealed). }
   function Gated: Boolean;
@@ -130,6 +130,20 @@ var
     end;
   end;
 
+  { Status-bar messages: Info is a success/advisory (calm colour), Fail an
+    error (alarming colour). Both show until the next keypress. }
+  procedure Info(const m: string);
+  begin
+    err := m;
+    errOk := True;
+  end;
+
+  procedure Fail(const m: string);
+  begin
+    err := m;
+    errOk := False;
+  end;
+
   function SelAuthor: string;
   begin
     if (selReply >= 0) and (selReply <= High(replies)) then
@@ -180,6 +194,8 @@ var
       cursor := '';
     end;
     page := FetchRepliesPage(sess, entry.PostId, cursor, nextCursor, err);
+    if err <> '' then
+      errOk := False; // a load failure is an error
     oldLen := Length(replies);
     SetLength(replies, oldLen + Length(page));
     for k := 0 to High(page) do
@@ -347,7 +363,7 @@ var
   begin
     if not Limiter.Check('watch', lerr) then
     begin
-      err := lerr;
+      Fail(lerr);
       Exit;
     end;
     if watching then
@@ -358,7 +374,7 @@ var
         watching := False;
       end
       else
-        err := 'Unwatch failed: ' + terr;
+        Fail('Unwatch failed: ' + terr);
     end
     else if WatchThread(sess, entry.PostId, terr) then
     begin
@@ -366,7 +382,7 @@ var
       watching := True;
     end
     else
-      err := 'Watch failed: ' + terr;
+      Fail('Watch failed: ' + terr);
   end;
 
   { Report the selected item (entry or reply) to moderators, with an optional
@@ -378,7 +394,7 @@ var
   begin
     if SelAuthor = sess.Username then
     begin
-      err := 'You can''t report your own content.';
+      Fail('You can''t report your own content.');
       Exit;
     end;
     if selReply = -1 then
@@ -399,7 +415,7 @@ var
         reason := '';
     if not Limiter.Check('flag', lerr) then
     begin
-      err := lerr;
+      Fail(lerr);
       Exit;
     end;
     if selReply = -1 then
@@ -410,12 +426,12 @@ var
     begin
       Limiter.Note('flag');
       if already then
-        err := 'Already reported.'
+        Info('Already reported.')
       else
-        err := 'Reported. ✓';
+        Info('Reported. ✓');
     end
     else
-      err := 'Report failed: ' + lerr;
+      Fail('Report failed: ' + lerr);
   end;
 
   { The n-th (1-based) playable audio attachment, images skipped. }
@@ -458,9 +474,9 @@ var
     if not AudioAt(n, url, lbl) then
       Exit; // out of range: ignore
     if PlayAudio(url, lbl) then
-      err := 'Playing ▶ ' + lbl
+      Info('Playing ▶ ' + lbl)
     else
-      err := 'Could not start mpv (need mpv + yt-dlp on PATH).';
+      Fail('Could not start mpv (need mpv + yt-dlp on PATH).');
   end;
 
   { Open the selected item's first link in the browser. }
@@ -470,11 +486,11 @@ var
   begin
     u := FirstUrl(SelContent);
     if u = '' then
-      err := 'No link to open here.'
+      Info('No link to open here.')
     else if OpenUrl(u) then
-      err := 'Opening ' + u
+      Info('Opening ' + u)
     else
-      err := 'Could not open link (need xdg-open on PATH).';
+      Fail('Could not open link (need xdg-open on PATH).');
   end;
 
   { The `o` key: stop if playing, else play the first track, else — when the
@@ -484,7 +500,7 @@ var
     if IsPlaying then
     begin
       StopAudio;
-      err := 'Stopped.';
+      Info('Stopped.');
     end
     else if AudioCount >= 1 then
       PlayTrack(1)
@@ -533,7 +549,10 @@ var
     end;
 
     if err <> '' then
-      DrawBar(ScreenRows - 1, cpError, ' ' + err + '    (q back)')
+      if errOk then
+        DrawBar(ScreenRows - 1, cpAccent, ' ' + err + '    (q back)')
+      else
+        DrawBar(ScreenRows - 1, cpError, ' ' + err + '    (q back)')
     else
     begin
       if selReply = -1 then
@@ -582,6 +601,7 @@ var
 begin
   Result := False;
   err := '';
+  errOk := False;
   selReply := -1;
   revealed := False;
   LoadReplies(True);
@@ -634,23 +654,23 @@ begin
         end;
       Ord('i'):
         if Gated then
-          err := 'Reveal NSFW content first (x).'
+          Info('Reveal NSFW content first (x).')
         else if Length(images) > 0 then
           ViewImages(images)
         else
-          err := 'No images in this thread.';
+          Info('No images in this thread.');
       Ord('p'):
         RunProfile(sess, SelAuthor);
       Ord('b'):
         if not Limiter.Check('bookmark', derr) then
-          err := derr
+          Fail(derr)
         else if CreateBookmarkPost(sess, entry.PostId, bmid, derr) then
         begin
           Limiter.Note('bookmark');
-          err := 'Bookmarked this post.';
+          Info('Bookmarked this post.');
         end
         else
-          err := 'Bookmark failed: ' + derr;
+          Fail('Bookmark failed: ' + derr);
       Ord('w'):
         DoWatchToggle;
       Ord('f'):
@@ -688,7 +708,7 @@ begin
         if selReply = -1 then
         begin
           if entry.AuthorUsername <> sess.Username then
-            err := 'You can only delete your own entries.'
+            Fail('You can only delete your own entries.')
           else if UIConfirm('Delete your entry? This cannot be undone.') then
           begin
             if DeleteEntry(sess, entry.PostId, derr) then
@@ -697,11 +717,11 @@ begin
               Break;
             end
             else
-              err := 'Delete failed: ' + derr;
+              Fail('Delete failed: ' + derr);
           end;
         end
         else if replies[selReply].AuthorUsername <> sess.Username then
-          err := 'You can only delete your own replies.'
+          Fail('You can only delete your own replies.')
         else if UIConfirm('Delete your reply? This cannot be undone.') then
         begin
           if DeleteReply(sess, replies[selReply].ReplyId, derr) then
@@ -714,7 +734,7 @@ begin
             ScrollToSel;
           end
           else
-            err := 'Delete failed: ' + derr;
+            Fail('Delete failed: ' + derr);
         end;
       Ord('r'):
         begin
