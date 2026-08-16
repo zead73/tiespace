@@ -21,7 +21,7 @@ implementation
 
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsUI, CsMarkdown, CsApi, CsRateLimit,
-  CsCompose, CsImage, CsProfile, CsPlayer;
+  CsCompose, CsImage, CsProfile, CsPlayer, CsOpen;
 
 const
   PAGE = 50;
@@ -136,6 +136,37 @@ var
       Result := replies[selReply].AuthorUsername
     else
       Result := entry.AuthorUsername;
+  end;
+
+  { Body text of the selected item (entry or reply). }
+  function SelContent: string;
+  begin
+    if (selReply >= 0) and (selReply <= High(replies)) then
+      Result := replies[selReply].Content
+    else
+      Result := entry.Content;
+  end;
+
+  { The first http(s) URL in s — inside a [text](url) link or bare — else ''. }
+  function FirstUrl(const s: string): string;
+  var
+    p, q, n: Integer;
+    lower: string;
+  begin
+    Result := '';
+    lower := LowerCase(s);
+    p := Pos('https://', lower);
+    if p = 0 then
+      p := Pos('http://', lower);
+    if p = 0 then
+      Exit;
+    n := Length(s);
+    q := p;
+    // URL runs until whitespace or a markdown link's closing delimiters.
+    while (q <= n) and (s[q] > ' ') and (s[q] <> ')') and (s[q] <> ']')
+      and (s[q] <> '>') do
+      Inc(q);
+    Result := Copy(s, p, q - p);
   end;
 
   procedure LoadReplies(reset: Boolean);
@@ -432,8 +463,23 @@ var
       err := 'Could not start mpv (need mpv + yt-dlp on PATH).';
   end;
 
-  { The `o` key: stop if something's playing, else play the first track. }
-  procedure DoPlayAudio;
+  { Open the selected item's first link in the browser. }
+  procedure DoOpenLink;
+  var
+    u: string;
+  begin
+    u := FirstUrl(SelContent);
+    if u = '' then
+      err := 'No link to open here.'
+    else if OpenUrl(u) then
+      err := 'Opening ' + u
+    else
+      err := 'Could not open link (need xdg-open on PATH).';
+  end;
+
+  { The `o` key: stop if playing, else play the first track, else — when the
+    item has no audio — open its first link. }
+  procedure DoOpen;
   begin
     if IsPlaying then
     begin
@@ -443,7 +489,7 @@ var
     else if AudioCount >= 1 then
       PlayTrack(1)
     else
-      err := 'No audio attachment to play.';
+      DoOpenLink;
   end;
 
   procedure Redraw;
@@ -522,7 +568,9 @@ var
           else
             i := AudioCount;
           status := status + ' · 1-' + IntToStr(i) + ' play';
-        end;
+        end
+      else if FirstUrl(SelContent) <> '' then
+        status := status + ' · o open';
       if cursor <> '' then
         status := status + ' · m more';
       status := status + ' · q back';
@@ -608,7 +656,7 @@ begin
       Ord('f'):
         DoFlag;
       Ord('o'):
-        DoPlayAudio;
+        DoOpen;
       Ord('1')..Ord('9'):
         PlayTrack(key - Ord('0'));
       Ord('x'):

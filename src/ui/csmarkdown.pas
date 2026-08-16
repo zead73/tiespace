@@ -119,7 +119,10 @@ begin
           if Trim(txt) = '' then
             txt := url;
           AddRun(Result, buf, basePair, bold, False, ital); buf := '';
-          AddRun(Result, txt, cpAccent, False, True, False); // link = accent + underline
+          AddRun(Result, txt, cpAccent, False, True, False); // link text = accent + underline
+          // Show the destination inline (dim), unless the text already is the URL.
+          if txt <> url then
+            AddRun(Result, ' → ' + url, cpMeta, False, False, False);
           i := ce + 1;
           Continue;
         end;

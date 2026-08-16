@@ -41,14 +41,16 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - feed (paginated `GET /v1/posts`); `c` new entry, `d` delete your own
 - thread view: **selectable** entry + replies with **rendered markdown** in
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
-  `---` rules); `c` reply (to the entry or to a specific reply, nested); `d`
-  delete your own entry or reply; `b` bookmark the post; `f` report (flag) an
-  entry/reply; `p` author profile; `i` view post images / image attachments
-  (shells out to `chafa`); `w` watch/unwatch the thread (a 👁 marks a watched
-  thread). Audio/jukebox attachments show as a numbered text line; `o` plays the
-  first (or `1`–`9` picks a track when a post has several) in the **background**
-  (shells out to `mpv` + `yt-dlp`) while you keep browsing — the feed header
-  shows what's playing, and `o` there stops it
+  `---` rules); links show their destination inline (`text → https://…`); `c`
+  reply (to the entry or to a specific reply, nested); `d` delete your own entry
+  or reply; `b` bookmark the post; `f` report (flag) an entry/reply; `p` author
+  profile; `i` view post images / image attachments (shells out to `chafa`); `w`
+  watch/unwatch the thread (a 👁 marks a watched thread). Audio/jukebox
+  attachments show as a numbered text line; `o` plays the first (or `1`–`9` picks
+  a track when a post has several) in the **background** (shells out to `mpv` +
+  `yt-dlp`) while you keep browsing — the feed header shows what's playing, and
+  `o` there stops it. On a post with no audio, `o` **opens** the selected item's
+  first link in your browser (`xdg-open`)
 - compose: multi-line UTF-8 editor (new entries can add an optional title, up
   to 3 topics, and an NSFW flag), `Ctrl+G` review + confirm, rate-limited; all
   text inputs accept terminal paste (bracketed paste)
@@ -242,6 +244,7 @@ src/
   app/csconfig.pas        XDG paths + 0600 secret file helpers
   app/cssession.pas       login, refresh, persistence
   app/cskeymap.pas        remappable feed launcher keys (local, TranslateKey)
+  app/csopen.pas          open a web link via xdg-open (http/s only, no shell)
   api/csapi.pas           shared fetchers (entry by id/slug, reply, unread count)
   model/csmodels.pas      TEntry/TReply/TNotification + entity decode + time/format
   ui/csui.pas             ncursesw core: colours, wcwidth layout, WrapText

@@ -236,6 +236,10 @@ begin
     'md: link -> accent + underline');
   doc := RenderMarkdown('[](http://x)', 80);
   EqS(LineText(doc[0]), 'http://x', 'md: empty link text -> url');
+  doc := RenderMarkdown('[go](http://x)', 80);
+  EqS(LineText(doc[0]), 'go → http://x', 'md: link shows destination inline');
+  doc := RenderMarkdown('[http://x](http://x)', 80);
+  EqS(LineText(doc[0]), 'http://x', 'md: text already the url -> no duplicate');
 
   doc := RenderMarkdown('# Title', 80);
   EqS(LineText(doc[0]), 'Title', 'md: heading marker stripped');
