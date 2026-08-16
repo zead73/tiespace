@@ -56,6 +56,7 @@ begin
   case action of
     'entry': begin perMin := 2; perDay := 15; end;
     'reply': begin perMin := 3; perDay := 15; end;
+    'edit': begin perMin := 5; perDay := 30; end; // edit entry/reply
     'bookmark': begin perMin := 5; perDay := 75; end;
     'follow': begin perMin := 3; perDay := 15; end;
     'note': begin perMin := 3; perDay := 30; end;

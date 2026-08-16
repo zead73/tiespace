@@ -29,6 +29,12 @@ function ComposeGuildThread(sess: TCsSession; const guildSlug, guildLabel: strin
 function ComposeNote(sess: TCsSession): Boolean;
 function EditNote(sess: TCsSession; const noteId, startContent, keepTopics: string): Boolean;
 
+{ Edit the body of an existing entry / reply, pre-filled with its current text
+  (content only). The server allows this for supporters within 5 minutes of
+  posting; otherwise the save comes back with a 403. Returns True if saved. }
+function EditEntryContent(sess: TCsSession; const postId, startContent: string): Boolean;
+function EditReplyContent(sess: TCsSession; const replyId, startContent: string): Boolean;
+
 implementation
 
 uses
@@ -464,6 +470,63 @@ begin
         ShowMsg('Failed: ' + err);
     end;
   until False;
+end;
+
+{ Shared body for editing an entry or a reply: the content editor pre-filled,
+  then PATCH content. kind is 'entry' or 'reply'. }
+function EditPost(sess: TCsSession; const header, kind, id, startContent: string): Boolean;
+var
+  buffer, err, msg: string;
+begin
+  Result := False;
+  buffer := startContent;
+  repeat
+    if not EditText(header, buffer) then
+      Exit(False); // Esc: cancelled
+    if Trim(buffer) = '' then
+    begin
+      ShowMsg('Nothing to save.');
+      Continue;
+    end;
+    if CodepointCount(buffer) > MAX_CHARS then
+    begin
+      ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
+      Continue;
+    end;
+    if not Limiter.Check('edit', msg) then
+    begin
+      ShowMsg(msg);
+      Continue;
+    end;
+    if ConfirmReview(' Review — edit ' + kind, buffer,
+      ' Save changes?    [y] save     [n] keep editing') then
+    begin
+      if kind = 'entry' then
+        Result := EditEntry(sess, id, buffer, err)
+      else
+        Result := EditReply(sess, id, buffer, err);
+      if Result then
+      begin
+        Limiter.Note('edit');
+        ShowMsg('Saved. ✓');
+        Exit(True);
+      end
+      else
+        ShowMsg('Failed: ' + err); // e.g. 403 outside the window / not a supporter
+    end;
+  until False;
+end;
+
+function EditEntryContent(sess: TCsSession; const postId, startContent: string): Boolean;
+begin
+  Result := EditPost(sess, 'Edit entry — supporters, within 5 min of posting',
+    'entry', postId, startContent);
+end;
+
+function EditReplyContent(sess: TCsSession; const replyId, startContent: string): Boolean;
+begin
+  Result := EditPost(sess, 'Edit reply — supporters, within 5 min of posting',
+    'reply', replyId, startContent);
 end;
 
 end.

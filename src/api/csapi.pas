@@ -29,6 +29,11 @@ function CreateEntry(sess: TCsSession; const content: string;
 function CreateReply(sess: TCsSession; const postId, content: string;
   out replyId, err: string; const parentReplyId: string = ''): Boolean;
 
+{ Edit the body of your own entry / reply (PATCH content). Server-gated: for
+  supporters, within 5 minutes of posting — otherwise a 403 comes back in err. }
+function EditEntry(sess: TCsSession; const postId, content: string; out err: string): Boolean;
+function EditReply(sess: TCsSession; const replyId, content: string; out err: string): Boolean;
+
 { Delete your own entry / reply. }
 function DeleteEntry(sess: TCsSession; const id: string; out err: string): Boolean;
 function DeleteReply(sess: TCsSession; const id: string; out err: string): Boolean;
@@ -343,6 +348,40 @@ end;
 function DeleteReply(sess: TCsSession; const id: string; out err: string): Boolean;
 begin
   Result := DeleteAt(sess, '/v1/replies/' + id, err);
+end;
+
+{ PATCH only `content` — the one field a reply edit allows, and enough for an
+  entry (title/topics/etc. are left untouched by not sending them). }
+function EditAt(sess: TCsSession; const path, content: string; out err: string): Boolean;
+var
+  body, env: TJSONObject;
+begin
+  Result := False;
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    try
+      env := sess.Client.PatchJSONObj(path, body);
+      env.Free;
+      Result := True;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
+end;
+
+function EditEntry(sess: TCsSession; const postId, content: string; out err: string): Boolean;
+begin
+  Result := EditAt(sess, '/v1/posts/' + postId, content, err);
+end;
+
+function EditReply(sess: TCsSession; const replyId, content: string; out err: string): Boolean;
+begin
+  Result := EditAt(sess, '/v1/replies/' + replyId, content, err);
 end;
 
 function SendChatMessage(sess: TCsSession; const roomId, content: string;

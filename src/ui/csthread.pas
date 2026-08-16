@@ -14,8 +14,8 @@ uses
   CsSession, CsModels;
 
 { Returns True if the feed should reload afterwards (a reply was posted, or the
-  entry was deleted). }
-function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
+  entry was deleted). entry is taken by value so an in-place edit can refresh it. }
+function RunThread(sess: TCsSession; entry: TEntry): Boolean;
 
 implementation
 
@@ -57,7 +57,7 @@ begin
   end;
 end;
 
-function RunThread(sess: TCsSession; const entry: TEntry): Boolean;
+function RunThread(sess: TCsSession; entry: TEntry): Boolean;
 var
   replies: TReplyArray;
   cursor, nextCursor, err, derr, bmid: string;
@@ -517,6 +517,50 @@ var
       DoOpenLink;
   end;
 
+  { Edit the body of the selected item (your own entry/reply). The 5-minute
+    window and supporter requirement are server-enforced; a 403 surfaces here. }
+  procedure DoEdit;
+  var
+    derr: string;
+    fresh: TEntry;
+  begin
+    if SelAuthor <> sess.Username then
+    begin
+      Fail('You can only edit your own content.');
+      Exit;
+    end;
+    if selReply = -1 then
+    begin
+      if entry.Deleted then
+      begin
+        Fail('This entry was deleted.');
+        Exit;
+      end;
+      if EditEntryContent(sess, entry.PostId, entry.Content) then
+      begin
+        // refetch so the new body + "· edited" marker show; keep old on failure
+        if FetchEntryById(sess, entry.PostId, fresh, derr) then
+          entry := fresh;
+        BuildLines;
+        Info('Edited. ✓');
+      end;
+    end
+    else
+    begin
+      if replies[selReply].Deleted then
+      begin
+        Fail('This reply was deleted.');
+        Exit;
+      end;
+      if EditReplyContent(sess, replies[selReply].ReplyId, replies[selReply].Content) then
+      begin
+        LoadReplies(True); // refetch replies -> edited content + marker
+        BuildLines;
+        Info('Edited. ✓');
+      end;
+    end;
+  end;
+
   procedure Redraw;
   var
     i, idx: Integer;
@@ -579,7 +623,7 @@ var
         else
           status := status + ' · x reveal';
       if SelAuthor = sess.Username then
-        status := status + ' · d delete'
+        status := status + ' · e edit · d delete'
       else
         status := status + ' · f flag';
       if Length(images) > 0 then
@@ -686,6 +730,8 @@ begin
         DoFlag;
       Ord('o'):
         DoOpen;
+      Ord('e'):
+        DoEdit;
       Ord('1')..Ord('9'):
         PlayTrack(key - Ord('0'));
       Ord('x'):

@@ -43,7 +43,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
   bodies (bold, italic, `code`, headings, `-`/`1.` lists, `>` quotes, links,
   `---` rules); links show their destination inline (`text → https://…`); an
   edited entry or reply is marked `· edited`; `c`
-  reply (to the entry or to a specific reply, nested); `d` delete your own entry
+  reply (to the entry or to a specific reply, nested); `e` edit your own entry or
+  reply's body (see note below); `d` delete your own entry
   or reply; `b` bookmark the post; `f` report (flag) an entry/reply; `p` author
   profile; `i` view post images / image attachments (shells out to `chafa`); `w`
   watch/unwatch the thread (a 👁 marks a watched thread). Audio/jukebox
@@ -81,6 +82,15 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - NSFW filtering: with **Filter NSFW** on (Settings), NSFW posts read as
   `[NSFW hidden]` in every list, and an NSFW thread's title/body/images stay
   hidden until you reveal them (`x`, per thread)
+
+> **Note on editing (`e`).** The Cyberspace API only allows editing an entry or
+> reply **for supporter accounts, within 5 minutes of posting**, and this client
+> edits the **body/content** only (not title, topics, or the NSFW flag). The
+> 5-minute window and supporter requirement are enforced by the server, so on a
+> non-supporter account the save returns a `403`, which the client surfaces.
+> Because the development account isn't a supporter, **this path is unverified
+> against a live edit** — the request shape follows the API docs, but it hasn't
+> been exercised end to end.
 
 **Real-time (M3)**
 - cIRC (`C`): room list, live message stream (RTDB SSE, background thread),

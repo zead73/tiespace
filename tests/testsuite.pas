@@ -188,9 +188,14 @@ begin
 end;
 
 procedure TestRateLimit;
-var m: string;
+var m: string; i: Integer;
 begin
   EqB(Limiter.Check('bookmark', m), True, 'RateLimit: fresh action allowed');
+
+  // edit entry/reply: 5/min.
+  EqB(Limiter.Check('edit', m), True, 'RateLimit: fresh edit allowed');
+  for i := 1 to 5 do Limiter.Note('edit');
+  EqB(Limiter.Check('edit', m), False, 'RateLimit: 6th edit within a minute blocked');
 
   Limiter.Note('follow'); Limiter.Note('follow'); Limiter.Note('follow'); // rule 3/min
   EqB(Limiter.Check('follow', m), False, 'RateLimit: 4th follow within a minute blocked');
