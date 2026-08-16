@@ -12,6 +12,11 @@ interface
 uses
   CsSession, CsModels;
 
+type
+  { Post visibility. pvDefault omits isPublic, so the server applies the
+    account's defaultPublicPost setting. }
+  TPostVisibility = (pvDefault, pvPublic, pvPrivate);
+
 function FetchEntryById(sess: TCsSession; const id: string;
   out e: TEntry; out err: string): Boolean;
 function FetchEntryBySlug(sess: TCsSession; const username, slug: string;
@@ -21,10 +26,12 @@ function FetchReplyById(sess: TCsSession; const id: string;
 function FetchUnreadCount(sess: TCsSession; out count: Integer;
   out exact: Boolean; out err: string): Boolean;
 
-{ Create a top-level entry (content only for now). Returns the new postId. }
+{ Create a top-level entry. Returns the new postId. vis controls visibility:
+  pvDefault leaves it to the account default. }
 function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
-  const topics: string = ''; const isNSFW: Boolean = False): Boolean;
+  const topics: string = ''; const isNSFW: Boolean = False;
+  const vis: TPostVisibility = pvDefault): Boolean;
 { Create a reply to a post; pass parentReplyId to reply to a specific reply. }
 function CreateReply(sess: TCsSession; const postId, content: string;
   out replyId, err: string; const parentReplyId: string = ''): Boolean;
@@ -254,7 +261,8 @@ end;
 
 function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
-  const topics: string = ''; const isNSFW: Boolean = False): Boolean;
+  const topics: string = ''; const isNSFW: Boolean = False;
+  const vis: TPostVisibility = pvDefault): Boolean;
 var
   body, env, d: TJSONObject;
 begin
@@ -270,6 +278,11 @@ begin
       AddTopics(body, topics);
     if isNSFW then
       body.Add('isNSFW', True);
+    case vis of
+      pvPublic: body.Add('isPublic', True);
+      pvPrivate: body.Add('isPublic', False);
+      // pvDefault: omit isPublic -> server uses the account's defaultPublicPost
+    end;
     try
       env := sess.Client.PostJSONObj('/v1/posts', body);
       try

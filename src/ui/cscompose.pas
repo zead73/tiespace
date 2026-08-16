@@ -176,9 +176,9 @@ begin
   until False;
 end;
 
-function ConfirmPost(const content, user: string): Boolean;
+function ConfirmPost(const content, user, visSuffix: string): Boolean;
 begin
-  Result := ConfirmReview(' Review — post as @' + user, content,
+  Result := ConfirmReview(' Review — post as @' + user + visSuffix, content,
     ' Post this?    [y] post     [n] keep editing');
 end;
 
@@ -308,18 +308,50 @@ begin
   until False;
 end;
 
+{ Visibility for a new entry: p = public (visible without login), n = private,
+  Enter/Esc = leave it to your account default (defaultPublicPost). }
+function AskPublic: TPostVisibility;
+var
+  k: LongInt;
+begin
+  Result := pvDefault;
+  DrawBar(ScreenRows - 1, cpStatus,
+    ' Visibility?    [p] public    [n] private    [Enter] your default');
+  UIRefresh;
+  repeat
+    k := UIGetKey;
+    case k of
+      Ord('p'), Ord('P'): Exit(pvPublic);
+      Ord('n'), Ord('N'): Exit(pvPrivate);
+      10, 13, 27: Exit(pvDefault);
+    end;
+  until False;
+end;
+
+function VisLabel(vis: TPostVisibility): string;
+begin
+  case vis of
+    pvPublic: Result := 'public';
+    pvPrivate: Result := 'private';
+  else
+    Result := 'account default';
+  end;
+end;
+
 function SendLoop(sess: TCsSession; const header, action: string;
   isReply: Boolean; const postId, parentReplyId: string;
   const guildSlug: string = ''): Boolean;
 var
-  buffer, newId, err, msg, title, topics: string;
+  buffer, newId, err, msg, title, topics, visSuffix: string;
   nsfw: Boolean;
+  vis: TPostVisibility;
 begin
   Result := False;
   buffer := '';
   title := '';
   topics := '';
   nsfw := False;
+  vis := pvDefault;
   repeat
     if not EditText(header, buffer) then
       Exit(False); // Esc: cancelled
@@ -341,21 +373,28 @@ begin
       if not UIPromptLine('Topics (optional, space-separated):', topics) then
         topics := '';
       if guildSlug = '' then
+      begin
         nsfw := AskNSFW; // guild threads have no NSFW flag
+        vis := AskPublic; // ...nor a public/private choice
+      end;
     end;
     if not Limiter.Check(action, msg) then
     begin
       ShowMsg(msg);
       Continue;
     end;
-    if ConfirmPost(buffer, sess.Username) then
+    if (not isReply) and (guildSlug = '') then
+      visSuffix := '   ·   ' + VisLabel(vis) // only entries have a visibility choice
+    else
+      visSuffix := '';
+    if ConfirmPost(buffer, sess.Username, visSuffix) then
     begin
       if isReply then
         Result := CreateReply(sess, postId, buffer, newId, err, parentReplyId)
       else if guildSlug <> '' then
         Result := CreateGuildThread(sess, guildSlug, buffer, newId, err, title, topics)
       else
-        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw);
+        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw, vis);
       if Result then
       begin
         Limiter.Note(action);

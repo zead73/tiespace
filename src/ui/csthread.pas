@@ -153,6 +153,15 @@ var
       Result := '';
   end;
 
+  { The entry's visibility word — 'public' (visible without login) or 'private'. }
+  function VisWord(isPublic: Boolean): string;
+  begin
+    if isPublic then
+      Result := 'public'
+    else
+      Result := 'private';
+  end;
+
   function SelAuthor: string;
   begin
     if (selReply >= 0) and (selReply <= High(replies)) then
@@ -241,7 +250,8 @@ var
 
     // Entry header + body (owner -1).
     AddLine('@' + entry.AuthorUsername + '   ·   ' + RelativeTime(entry.CreatedAt)
-      + EditedTag(entry.EditedAt), cpAccent, True, -1);
+      + '   ·   ' + VisWord(entry.IsPublic) + EditedTag(entry.EditedAt),
+      cpAccent, True, -1);
     if (not Gated) and (Trim(entry.Title) <> '') then
       AddLine(entry.Title, cpText, True, -1);
     if Length(entry.Topics) > 0 then
