@@ -7,3 +7,10 @@
 
 # Claude Code local settings (machine/session-specific, not for sharing)
 /.claude/
+
+# AppImage build artifacts (the tooling under packaging/appimage/ is tracked)
+/dist/
+/squashfs-root/
+*.AppImage
+/packaging/tiespace.AppDir/
+/packaging/appimage/appimagetool

@@ -1,0 +1,6 @@
+#!/bin/sh
+# AppImage entrypoint: point the loader at the bundled libs, then run the TUI in
+# the terminal that launched us (stdin/stdout are inherited, so ncurses works).
+HERE="$(dirname "$(readlink -f "$0")")"
+export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$HERE/usr/bin/tiespace" "$@"

@@ -1,0 +1,47 @@
+name: Release AppImage
+
+# Builds a portable x86_64 AppImage in an old-glibc container (see
+# packaging/appimage/Dockerfile) and attaches it to the GitHub Release when you
+# push a version tag. Also runnable manually (Actions → Run workflow) to produce
+# the AppImage as a build artifact without cutting a release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to attach the file to the release
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the old-glibc builder image
+        run: docker build -t tiespace-appimage-builder - < packaging/appimage/Dockerfile
+
+      - name: Build the AppImage
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD":/src -w /src tiespace-appimage-builder
+
+      - name: Report the glibc floor
+        run: |
+          ./dist/tiespace-x86_64.AppImage --appimage-extract >/dev/null
+          echo "AppImage requires glibc <= $(objdump -T squashfs-root/usr/bin/tiespace \
+            squashfs-root/usr/lib/*.so* 2>/dev/null \
+            | grep -oE 'GLIBC_[0-9.]+' | sort -uV | tail -1)"
+
+      - name: Upload as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiespace-x86_64.AppImage
+          path: dist/tiespace-x86_64.AppImage
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/tiespace-x86_64.AppImage

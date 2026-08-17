@@ -133,6 +133,35 @@ If FPC can't locate gcc's C-runtime directory it emits harmless `crtbeginS.o` /
 `crtendS.o` linker warnings; the Makefile normally finds it and suppresses them,
 and either way the binary links and runs.
 
+## AppImage
+
+A single-file `.AppImage` (binary + bundled `ncursesw` and OpenSSL 3) is a
+"download and run" option that needs nothing installed but a terminal.
+
+```bash
+make appimage          # quick: uses THIS machine's libraries (host glibc)
+make appimage-release  # portable: builds in an old-glibc container (needs Docker)
+```
+
+`make appimage` is handy for local testing, but the result inherits your build
+machine's glibc, so it only runs on systems as new or newer. For a release,
+`make appimage-release` builds inside [an AlmaLinux 9
+container](packaging/appimage/Dockerfile) (glibc **2.34** + OpenSSL 3), so the
+result runs on essentially every currently-supported distro — Ubuntu 22.04+,
+Debian 12, RHEL/Alma/Rocky 9, Fedora, Arch, openSUSE. (glibc is backward- but not
+forward-compatible, so the build environment's glibc sets the floor; the bundled
+libraries carry that floor too.)
+
+Pushing a `v*` tag runs [the release workflow](.github/workflows/release.yml),
+which does the same container build and attaches the AppImage to the GitHub
+Release.
+
+To run it: `./tiespace-x86_64.AppImage`. AppImages need **FUSE** to self-mount —
+if it won't start, either install `libfuse2` or run
+`./tiespace-x86_64.AppImage --appimage-extract-and-run`. The optional
+`chafa`/`mpv`/`yt-dlp`/`xdg-open` helpers are **not** bundled; install them on the
+host if you want images, audio, or link-opening.
+
 ## Platforms
 
 Native on **Linux** and the **BSDs** — anywhere with FPC 3.2.2, wide ncurses,

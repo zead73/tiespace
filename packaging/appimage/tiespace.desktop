@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=tiespace
+Exec=tiespace
+Icon=tiespace
+Comment=Human-driven TUI client for the Cyberspace API
+Categories=Network;ConsoleOnly;
+Terminal=true
