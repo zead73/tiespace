@@ -622,7 +622,7 @@ var
         selDesc := 'entry'
       else
         selDesc := 'reply @' + replies[selReply].AuthorUsername;
-      status := ' ' + selDesc + '   ·   Space scroll · j/k select · c reply · b bookmark · p profile';
+      status := ' ' + selDesc + '   ·   ↑↓/Space scroll · j/k select · c reply · b bookmark · p profile';
       if watching then
         status := status + ' · w unwatch'
       else
@@ -683,18 +683,22 @@ begin
     case key of
       Ord('q'), 27, Ord('h'), KEY_LEFT, KEY_BACKSPACE, 127:
         Break;
-      Ord('j'), KEY_DOWN:
+      Ord('j'): // select next entry/reply
         begin
           if selReply < High(replies) then
             Inc(selReply);
           ScrollToSel;
         end;
-      Ord('k'), KEY_UP:
+      Ord('k'): // select previous
         begin
           if selReply > -1 then
             Dec(selReply);
           ScrollToSel;
         end;
+      KEY_DOWN: // scroll one line (Redraw clamps top)
+        Inc(top);
+      KEY_UP:
+        top := top - 1;
       KEY_NPAGE, Ord(' '): // Space is the discoverable "read more" key
         top := top + visible;
       KEY_PPAGE:

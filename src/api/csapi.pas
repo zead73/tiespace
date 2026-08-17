@@ -226,8 +226,8 @@ begin
   end;
 end;
 
-{ Parse a free-form "music, linux" / "#music #linux" string into up to 3
-  lowercased topics and attach them to the request body. }
+{ Parse a comma-separated string (e.g. "music, space music, #linux") into up to 3
+  lowercased topics — a topic may be multiple words — and attach them to the body. }
 procedure AddTopics(body: TJSONObject; const s: string);
 var
   arr: TJSONArray;
@@ -247,8 +247,9 @@ var
 begin
   arr := TJSONArray.Create;
   tok := '';
+  // Comma-separated only — a topic can be multiple words (e.g. "space music").
   for i := 1 to Length(s) do
-    if s[i] in [' ', ',', #9] then
+    if s[i] = ',' then
       Flush
     else
       tok := tok + s[i];

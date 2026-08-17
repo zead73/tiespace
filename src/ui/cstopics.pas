@@ -23,7 +23,8 @@ const
 
 type
   TTopic = record
-    Name: string;
+    Id: string;    // topicId / slug — used to fetch the topic's entries
+    Name: string;  // display name (may be multi-word)
     Count: Integer;
   end;
   TTopicArray = array of TTopic;
@@ -49,12 +50,15 @@ begin
           if a.Items[i] is TJSONObject then
           begin
             o := TJSONObject(a.Items[i]);
-            Result[i].Name := o.Get('slug', o.Get('topic', o.Get('name', '')));
-            Result[i].Count := o.Get('count', o.Get('postCount', o.Get('entryCount', 0)));
+            Result[i].Id := o.Get('topicId', o.Get('slug', o.Get('name', '')));
+            Result[i].Name := o.Get('name', o.Get('topic', Result[i].Id));
+            Result[i].Count := o.Get('postsCount',
+              o.Get('count', o.Get('postCount', o.Get('entryCount', 0))));
           end
           else if a.Items[i] is TJSONString then
           begin
-            Result[i].Name := a.Items[i].AsString;
+            Result[i].Id := a.Items[i].AsString;
+            Result[i].Name := Result[i].Id;
             Result[i].Count := -1;
           end;
       end;
@@ -96,7 +100,7 @@ begin
   end;
 end;
 
-procedure RunTopicPosts(sess: TCsSession; const slug: string);
+procedure RunTopicPosts(sess: TCsSession; const id, name: string);
 var
   entries: TEntryArray;
   cursor, nextCursor, err: string;
@@ -104,7 +108,7 @@ var
 
   procedure LoadFirst;
   begin
-    entries := FetchTopicPosts(sess, slug, '', nextCursor, err);
+    entries := FetchTopicPosts(sess, id, '', nextCursor, err);
     cursor := nextCursor;
     sel := 0;
     top := 0;
@@ -117,7 +121,7 @@ var
   begin
     if cursor = '' then
       Exit;
-    page := FetchTopicPosts(sess, slug, cursor, nextCursor, err);
+    page := FetchTopicPosts(sess, id, cursor, nextCursor, err);
     oldLen := Length(entries);
     SetLength(entries, oldLen + Length(page));
     for k := 0 to High(page) do
@@ -182,7 +186,7 @@ var
     if top < 0 then
       top := 0;
     UIErase;
-    DrawBar(0, cpHeader, ' topic   ·   #' + slug);
+    DrawBar(0, cpHeader, ' topic   ·   #' + name);
     for i := 0 to visible - 1 do
     begin
       idx := top + i;
@@ -344,7 +348,7 @@ begin
         end;
       10, 13, KEY_ENTER:
         if (sel >= 0) and (sel <= High(topics)) then
-          RunTopicPosts(sess, topics[sel].Name);
+          RunTopicPosts(sess, topics[sel].Id, topics[sel].Name);
     end;
   until False;
 end;

@@ -370,7 +370,7 @@ begin
     begin
       if not UIPromptLine('Title (optional, Esc to skip):', title) then
         title := '';
-      if not UIPromptLine('Topics (optional, space-separated):', topics) then
+      if not UIPromptLine('Topics (optional, comma-separated):', topics) then
         topics := '';
       if guildSlug = '' then
       begin
@@ -448,7 +448,7 @@ begin
       ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
       Continue;
     end;
-    if not UIPromptLine('Topics (optional, space-separated):', topics) then
+    if not UIPromptLine('Topics (optional, comma-separated):', topics) then
       topics := '';
     if not Limiter.Check('note', msg) then
     begin
