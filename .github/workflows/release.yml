@@ -26,6 +26,8 @@ jobs:
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
             -v "$PWD":/src -w /src tiespace-appimage-builder
+          # also ship the bare (dynamically-linked) binary the container built
+          cp bin/tiespace dist/tiespace-x86_64
 
       - name: Report the glibc floor
         run: |
@@ -34,14 +36,20 @@ jobs:
             squashfs-root/usr/lib/*.so* 2>/dev/null \
             | grep -oE 'GLIBC_[0-9.]+' | sort -uV | tail -1)"
 
-      - name: Upload as a build artifact
+      - name: Upload as build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tiespace-x86_64.AppImage
-          path: dist/tiespace-x86_64.AppImage
+          name: tiespace-x86_64
+          path: |
+            dist/tiespace-x86_64.AppImage
+            dist/tiespace-x86_64
 
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/tiespace-x86_64.AppImage
+          body_path: .github/RELEASE_NOTES.md
+          generate_release_notes: true
+          files: |
+            dist/tiespace-x86_64.AppImage
+            dist/tiespace-x86_64
