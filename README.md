@@ -113,7 +113,13 @@ the checklist in [TODO.md](TODO.md).
 
 ## Build
 
-Requires: `fpc` 3.2.2, system OpenSSL 3, and wide ncurses (`ncursesw`).
+Requires: `fpc` 3.2.2, wide ncurses (`ncursesw`), and OpenSSL 3 — specifically
+the **development** package, because FPC's OpenSSL binding loads the *unversioned*
+`libssl.so`, which the plain runtime package doesn't ship. Install the `-dev` /
+`-devel` variant: `libssl-dev` on Debian/Ubuntu, `openssl-devel` on
+Fedora/RHEL/Alma, `openssl-dev` on Alpine (Arch's `openssl` already includes it).
+Without it you'll build fine but get a "Could not initialize OpenSSL" error at
+runtime.
 
 ```bash
 make           # builds the client and runs the tests (app + test)
@@ -165,8 +171,8 @@ host if you want images, audio, or link-opening.
 ## Platforms
 
 Native on **Linux** and the **BSDs** — anywhere with FPC 3.2.2, wide ncurses,
-OpenSSL, and (optional) `chafa` for images plus `mpv` + `yt-dlp` for playing
-audio attachments. There is **no native Windows build**: the UI
+OpenSSL 3 (the `-dev`/`-devel` package — see [Build](#build)), and (optional)
+`chafa` for images plus `mpv` + `yt-dlp` for playing audio attachments. There is **no native Windows build**: the UI
 is built on ncurses and a few POSIX calls (`wcwidth`, Unix file-mode bits,
 `fpSystem`), so on Windows you run it under **WSL**.
 
