@@ -61,18 +61,20 @@ var
   entries: TEntryArray;
   cursor, nextCursor, err, derr, bid: string;
   sel, top, visible, key: LongInt;
-  unread: Integer;
+  unread, unreadMail: Integer;
   unreadExact: Boolean;
 
   procedure RefreshUnread;
   var
-    uerr: string;
+    uerr, merr: string;
   begin
     if not FetchUnreadCount(sess, unread, unreadExact, uerr) then
     begin
       unread := 0;
       unreadExact := True;
     end;
+    if not FetchUnreadMail(sess, unreadMail, merr) then
+      unreadMail := 0;
   end;
 
   procedure LoadFirst;
@@ -289,6 +291,8 @@ end;
       else
         hdr := hdr + '   ·   99+ unread notifs (n)';
     end;
+    if unreadMail > 0 then
+      hdr := hdr + '   ·   ' + IntToStr(unreadMail) + ' unread mail (M)';
     if IsPlaying then
       hdr := hdr + '   ·   ▶ ' + NowPlaying + ' (o stop)';
     DrawBar(0, cpHeader, hdr);
@@ -416,6 +420,7 @@ begin
       Ord('M'):
         begin
           RunMail(sess);
+          RefreshUnread; // reading DMs changes the unread-mail badge
           err := '';
         end;
       Ord('N'):

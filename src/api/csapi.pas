@@ -25,6 +25,8 @@ function FetchReplyById(sess: TCsSession; const id: string;
   out r: TReply; out err: string): Boolean;
 function FetchUnreadCount(sess: TCsSession; out count: Integer;
   out exact: Boolean; out err: string): Boolean;
+{ Total unread C-Mail messages, summed across conversations (GET /v1/cmail). }
+function FetchUnreadMail(sess: TCsSession; out count: Integer; out err: string): Boolean;
 
 { Create a top-level entry. Returns the new postId. vis controls visibility:
   pvDefault leaves it to the account default. }
@@ -216,6 +218,37 @@ begin
       count := d.Get('count', 0);
       // exact=false once >100 unread: count then covers only the newest 100.
       exact := d.Get('exact', True);
+      Result := True;
+    finally
+      env.Free;
+    end;
+  except
+    on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+    on E: Exception do err := E.Message;
+  end;
+end;
+
+function FetchUnreadMail(sess: TCsSession; out count: Integer; out err: string): Boolean;
+var
+  env: TJSONObject;
+  d: TJSONData;
+  convos: TConversationArray;
+  i: Integer;
+begin
+  Result := False;
+  count := 0;
+  err := '';
+  try
+    env := sess.Client.GetJSONObj('/v1/cmail');
+    try
+      d := env.Find('data');
+      if (d <> nil) and (d is TJSONArray) then
+      begin
+        convos := ParseConversationArray(TJSONArray(d));
+        for i := 0 to High(convos) do
+          if convos[i].UnreadCount > 0 then
+            count := count + convos[i].UnreadCount;
+      end;
       Result := True;
     finally
       env.Free;
