@@ -54,17 +54,17 @@ begin
   perHour := 0; // only per-hour rules set this; leaves existing rules untouched
   perDay := 0;
   case action of
-    'entry': begin perMin := 2; perDay := 15; end;
-    'reply': begin perMin := 3; perDay := 15; end;
+    'entry': begin perMin := 2; perDay := 24; end;    // API 0.8.8: 15 -> 24/day
+    'reply': begin perMin := 3; perDay := 48; end;    // API 0.8.8: 15 -> 48/day
     'edit': begin perMin := 5; perDay := 30; end; // edit entry/reply
     'bookmark': begin perMin := 5; perDay := 75; end;
     'follow': begin perMin := 3; perDay := 15; end;
     'note': begin perMin := 3; perDay := 30; end;
-    'chat': begin perMin := 15; perDay := 300; end;
+    'chat': begin perMin := 15; perDay := 1000; end;  // API 0.8.8: 300 -> 1000/day
     'chat_delete': begin perMin := 5; perDay := 30; end;
-    'cmail': begin perMin := 15; perDay := 300; end;
+    'cmail': begin perMin := 15; perDay := 1000; end; // API 0.8.8: 300 -> 1000/day
     'cmail_start': begin perMin := 5; perDay := 50; end;
-    'guild_thread': begin perMin := 2; perDay := 15; end;
+    'guild_thread': begin perMin := 2; perDay := 24; end; // API 0.8.8: 15 -> 24/day
     'guild_join': begin perMin := 3; perDay := 15; end;
     'guild_leave': begin perMin := 3; perDay := 15; end;
     'guild_promote': begin perMin := 3; perDay := 15; end;
