@@ -98,6 +98,7 @@ type
     ConversationId: string;
     OtherUsername: string;
     OtherUserId: string;
+    OtherDeleted: Boolean; // the correspondent's account has been deleted
     LastMessage: string;
     LastMessageAt: Int64;
     UnreadCount: Integer;
@@ -539,6 +540,7 @@ begin
   begin
     Result.OtherUsername := TJSONObject(ou).Get('username', '');
     Result.OtherUserId := TJSONObject(ou).Get('userId', '');
+    Result.OtherDeleted := TJSONObject(ou).Get('deleted', False);
   end;
 end;
 

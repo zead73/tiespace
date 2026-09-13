@@ -607,6 +607,8 @@ var
     nameW := 18;
     rightX := W - rightW - 1;
     preview := c.LastMessage;
+    if c.OtherDeleted then
+      preview := '[deleted account] ' + preview; // API 0.8.9: otherUser.deleted
 
     if selected then
     begin
