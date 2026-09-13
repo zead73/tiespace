@@ -15,7 +15,8 @@ uses
   // emoji, curly quotes) came back mangled to '?'. Sending was fine (AsJSON just
   // concatenates bytes); this only bit the receive path.
   {$IFDEF UNIX}cthreads, cwstring,{$ENDIF}
-  SysUtils, CsHttp, CsConfig, CsSession, CsUI, CsLogin, CsFeed, CsKeyMap;
+  SysUtils, CsHttp, CsConfig, CsSession, CsUI, CsLogin, CsFeed, CsKeyMap,
+  CsVersion;
 
 const
   BASE = 'https://api.cyberspace.online';
@@ -25,6 +26,12 @@ var
   loggedIn: Boolean;
   startupErr: string;
 begin
+  if (ParamCount >= 1) and
+     ((ParamStr(1) = '--version') or (ParamStr(1) = '-v')) then
+  begin
+    WriteLn('tiespace ', AppVersion);
+    Halt(0);
+  end;
   sess := TCsSession.Create(BASE);
   try
     startupErr := '';

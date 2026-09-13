@@ -19,6 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stamp the version from the tag
+        # The build container has no git, so bake the version into version.inc
+        # here (the ref name is the tag, e.g. v0.5). CsVersion.AppVersion reads it.
+        run: printf "'%s'\n" "$GITHUB_REF_NAME" > src/app/version.inc
+
       - name: Build the old-glibc builder image
         run: docker build -t tiespace-appimage-builder - < packaging/appimage/Dockerfile
 

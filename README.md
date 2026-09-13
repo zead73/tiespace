@@ -166,7 +166,9 @@ To run it: `./tiespace-x86_64.AppImage`. AppImages need **FUSE** to self-mount â
 if it won't start, either install `libfuse2` or run
 `./tiespace-x86_64.AppImage --appimage-extract-and-run`. The optional
 `chafa`/`mpv`/`yt-dlp`/`xdg-open` helpers are **not** bundled; install them on the
-host if you want images, audio, or link-opening.
+host if you want images, audio, or link-opening. `--version` prints the build
+version (release binaries report their tag; a plain local build says `dev`); the
+in-app `?` help screen shows it too.
 
 ## Platforms
 
@@ -297,6 +299,7 @@ src/
   app/cssession.pas       login, refresh, persistence
   app/cskeymap.pas        remappable feed launcher keys (local, TranslateKey)
   app/csopen.pas          open a web link via xdg-open (http/s only, no shell)
+  app/csversion.pas       AppVersion string (version.inc, stamped from the tag by CI)
   api/csapi.pas           shared fetchers (entry by id/slug, reply, unread count)
   model/csmodels.pas      TEntry/TReply/TNotification + entity decode + time/format
   ui/csui.pas             ncursesw core: colours, wcwidth layout, WrapText

@@ -20,7 +20,7 @@ implementation
 uses
   SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsThread, CsNotify,
   CsCompose, CsRooms, CsMail, CsProfile, Csearch, CsTopics, CsBookmarks, CsGuilds,
-  CsNotes, CsWatches, CsSettings, CsPlayer, CsRateLimit, CsKeyMap;
+  CsNotes, CsWatches, CsSettings, CsPlayer, CsRateLimit, CsKeyMap, CsVersion;
 
 const
   PAGE = 25;
@@ -168,7 +168,8 @@ const
     '+----------------------------------------------------------------------+'
   );
 var
-  i, closeRow: Integer;
+  i, closeRow, pad: Integer;
+  titleLine, title, line: string;
 
   { Draw a run of line `s` (0-based col `cidx`, length `clen`) in a colour,
     at its original screen column so the box alignment is preserved. }
@@ -233,23 +234,36 @@ begin
   UIErase;
   DrawBar(0, cpHeader, ' tiespace - help');
 
+  // Rebuild the title row with the version, re-centred to the box's 70-col
+  // interior so the border stays aligned whatever the version's length.
+  title := 'TIESPACE ' + AppVersion + ' - KEYBINDINGS';
+  if Length(title) > 70 then
+    title := Copy(title, 1, 70);
+  pad := 70 - Length(title);
+  titleLine := '|' + StringOfChar(' ', pad div 2) + title +
+    StringOfChar(' ', pad - pad div 2) + '|';
+
   for i := 0 to High(h) do
   begin
     if 2 + i > ScreenRows - 1 then
       Break;
-    DrawText(2 + i, 2, cpAccent, h[i]); // frame first (cyan borders/dividers)
+    if i = 1 then
+      line := titleLine
+    else
+      line := h[i];
+    DrawText(2 + i, 2, cpAccent, line); // frame first (cyan borders/dividers)
     case i of                           // then overlay content by row kind
-      1:      Seg(2 + i, h[i], 1, 70, cpHeader, True);   // title band
+      1:      Seg(2 + i, line, 1, 70, cpHeader, True);   // title band
       3:      begin                                       // section headers
-                Seg(2 + i, h[i], 1, 34, cpAccent, True);
-                Seg(2 + i, h[i], 36, 35, cpAccent, True);
+                Seg(2 + i, line, 1, 34, cpAccent, True);
+                Seg(2 + i, line, 36, 35, cpAccent, True);
               end;
       4..13:  begin                                       // two key columns
-                DrawCell(2 + i, h[i], 1, 34);
-                DrawCell(2 + i, h[i], 36, 35);
+                DrawCell(2 + i, line, 1, 34);
+                DrawCell(2 + i, line, 36, 35);
               end;
-      15:     Seg(2 + i, h[i], 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
-      16..20: DrawContext(2 + i, h[i]);                    // context rows
+      15:     Seg(2 + i, line, 1, 70, cpAccent, True);    // CONTEXT SHORTCUTS
+      16..20: DrawContext(2 + i, line);                    // context rows
     end;                                                   // 0/2/14/21: borders
   end;
 
