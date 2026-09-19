@@ -417,6 +417,8 @@ begin
     'poke': Result := 'poked you';
     'chat_mention': Result := 'mentioned you in chat';
     'dm_message': Result := 'sent you a C-Mail';
+    'gift_received': Result := 'sent you a gift';
+    'gift_sent': Result := 'received your gift';
     'guild_new_thread': Result := 'started a guild thread';
     'supporter_granted': Result := 'granted you supporter';
     'supporter_removed': Result := 'removed your supporter';
