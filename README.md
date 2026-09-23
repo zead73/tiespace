@@ -8,7 +8,9 @@ bots, scraping, and AI-driven agents. tiespace is built to fit the first
 description: **you** trigger every post, reply, and message; there is no
 automation, no background scraping, and real-time updates come from the
 server's push stream rather than polling loops. A client-side rate limiter
-mirrors the API's documented limits.
+mirrors the API's documented write limits, and the server independently
+rate-limits reads (anti-scraping) — ceilings a hand-driven client never
+comes near.
 
 ## Screenshots
 
@@ -32,7 +34,8 @@ markers, and select mode (`Tab`) for acting on a message.*
 
 ## Status
 
-A working, human-driven client. Confirmed against a live account.
+A working, human-driven client, current with the **Cyberspace API v0.8.11**
+and confirmed against a live account.
 
 **Auth** — in-TUI login (`Q` logs out to it; OPTIONAL reads the password from `~/.cs-pw`,
 remembers the email), session restore, token refresh, `0600` credential file.
