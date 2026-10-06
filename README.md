@@ -34,7 +34,7 @@ markers, and select mode (`Tab`) for acting on a message.*
 
 ## Status
 
-A working, human-driven client, current with the **Cyberspace API v0.8.11**
+A working, human-driven client, current with the **Cyberspace API v0.8.12**
 and confirmed against a live account.
 
 **Auth** — in-TUI login (`Q` logs out to it; OPTIONAL reads the password from `~/.cs-pw`,
