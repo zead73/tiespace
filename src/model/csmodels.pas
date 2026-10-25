@@ -37,6 +37,7 @@ type
     RepliesCount: Integer;
     BookmarksCount: Integer;
     IsNSFW: Boolean;
+    ContentWarning: string; // author's short warning (API 0.9.0); '' when none
     IsPublic: Boolean;
     Deleted: Boolean;
   end;
@@ -174,8 +175,14 @@ function RelativeTimeMs(ms: Int64): string;
   of the content. }
 function EntrySummary(const e: TEntry): string;
 
+{ EntrySummary, but masked to "CW: <warning>" when the entry carries an author
+  content warning (API 0.9.0) — so a list teaser doesn't spoil the title/first
+  line. Deleted entries keep their "[deleted]" summary. }
+function ListSummary(const e: TEntry): string;
+
 { Feed/list summary with NSFW read-side handling: masked to "[NSFW hidden]" when
-  filtering is on, else prefixed "[NSFW] "; plain otherwise. }
+  filtering is on, else prefixed "[NSFW] "; a content warning (ListSummary) takes
+  precedence over the "[NSFW] " label; plain otherwise. }
 function FeedSummary(const e: TEntry; filterNSFW: Boolean): string;
 
 { A one-line label for an attachment (audio track, image, …). }
@@ -282,6 +289,7 @@ begin
   Result.RepliesCount := o.Get('repliesCount', 0);
   Result.BookmarksCount := o.Get('bookmarksCount', 0);
   Result.IsNSFW := o.Get('isNSFW', False);
+  Result.ContentWarning := DecodeEntities(o.Get('contentWarning', ''));
   Result.IsPublic := o.Get('isPublic', False);
   Result.Deleted := o.Get('deleted', False);
   td := o.Find('topics');
@@ -755,12 +763,20 @@ begin
   Result := Trim(s);
 end;
 
+function ListSummary(const e: TEntry): string;
+begin
+  if (not e.Deleted) and (Trim(e.ContentWarning) <> '') then
+    Exit('CW: ' + e.ContentWarning);
+  Result := EntrySummary(e);
+end;
+
 function FeedSummary(const e: TEntry; filterNSFW: Boolean): string;
 begin
   if e.IsNSFW and filterNSFW then
     Exit('[NSFW hidden]');
-  Result := EntrySummary(e);
-  if e.IsNSFW then
+  Result := ListSummary(e);
+  // Don't stack "[NSFW] " onto a "CW: " line; the warning already masks it.
+  if e.IsNSFW and (Trim(e.ContentWarning) = '') then
     Result := '[NSFW] ' + Result;
 end;
 

@@ -228,7 +228,7 @@ var
     else if FetchEntryById(sess, items[idx].TargetId, e, ferr) then
     begin
       items[idx].Author := '@' + e.AuthorUsername;
-      items[idx].Summary := EntrySummary(e);
+      items[idx].Summary := ListSummary(e);
     end;
   end;
 

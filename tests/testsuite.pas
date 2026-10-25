@@ -149,6 +149,12 @@ begin
   EqS(e.Attachments[0].Title, 'Music', 'ParseEntry: attachment title');
   EqS(e.Attachments[0].Artist, 'Eno', 'ParseEntry: attachment artist');
   EqS(e.Attachments[0].Src, 'https://y/x', 'ParseEntry: attachment src');
+
+  // contentWarning (API 0.9.0): absent -> '', present -> decoded.
+  EqS(PEntry('{"postId":"p3"}').ContentWarning, '',
+    'ParseEntry: contentWarning absent -> empty');
+  EqS(PEntry('{"postId":"p4","contentWarning":"spoilers &amp; stuff"}').ContentWarning,
+    'spoilers & stuff', 'ParseEntry: contentWarning decoded');
 end;
 
 procedure TestEntrySummary;
@@ -177,6 +183,19 @@ begin
   e.IsNSFW := True;
   EqS(FeedSummary(e, False), '[NSFW] Hi', 'FeedSummary: NSFW labelled, filter off');
   EqS(FeedSummary(e, True), '[NSFW hidden]', 'FeedSummary: NSFW masked, filter on');
+
+  // contentWarning (API 0.9.0) masks the teaser, unconditionally (not a filter pref).
+  e := Default(TEntry); e.Title := 'Hi'; e.ContentWarning := 'eye contact';
+  EqS(ListSummary(e), 'CW: eye contact', 'ListSummary: CW masks the teaser');
+  EqS(FeedSummary(e, False), 'CW: eye contact', 'FeedSummary: CW masks, filter off');
+  EqS(FeedSummary(e, True), 'CW: eye contact', 'FeedSummary: CW masks, filter on');
+  // CW takes precedence over the [NSFW] label; NSFW+filter still hides entirely.
+  e.IsNSFW := True;
+  EqS(FeedSummary(e, False), 'CW: eye contact', 'FeedSummary: CW beats [NSFW] label');
+  EqS(FeedSummary(e, True), '[NSFW hidden]', 'FeedSummary: NSFW filter still hides CW post');
+  // a deleted entry keeps [deleted] even with a CW set.
+  e := Default(TEntry); e.Deleted := True; e.ContentWarning := 'x';
+  EqS(ListSummary(e), '[deleted]', 'ListSummary: deleted beats CW');
 end;
 
 procedure TestRelativeTime;

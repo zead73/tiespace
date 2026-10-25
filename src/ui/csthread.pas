@@ -67,10 +67,17 @@ var
   top, visible, key, lastCols, selReply: Integer;
   watching, revealed, errOk: Boolean; // errOk: message is success/info, not an error
 
-  { An NSFW entry whose content is currently masked (filtering on, not revealed). }
+  { The entry has a reason to be gated behind a reveal: either an NSFW entry with
+    filtering on, or an author content warning (API 0.9.0, always gated). }
+  function Gateable: Boolean;
+  begin
+    Result := (sess.FilterNSFW and entry.IsNSFW) or (Trim(entry.ContentWarning) <> '');
+  end;
+
+  { Gateable and not yet revealed -> its title/body/attachments are masked. }
   function Gated: Boolean;
   begin
-    Result := sess.FilterNSFW and entry.IsNSFW and (not revealed);
+    Result := Gateable and (not revealed);
   end;
 
   function MaxTop: Integer;
@@ -229,7 +236,7 @@ var
     SetLength(lines, 0);
     SetLength(lineOwner, 0);
     SetLength(images, 0);
-    if not Gated then // a gated NSFW thread exposes no images until revealed
+    if not Gated then // a gated (NSFW/CW) thread exposes no images until revealed
     begin
       AppendImages(images, ExtractImages(entry.Content));
       for i := 0 to High(replies) do
@@ -266,7 +273,12 @@ var
     if entry.Deleted then
       AddLine('[deleted]', cpMeta, False, -1)
     else if Gated then
-      AddLine('🔞 NSFW content hidden — press x to reveal', cpNsfw, False, -1)
+    begin
+      if Trim(entry.ContentWarning) <> '' then
+        AddLine('⚠ CW: ' + entry.ContentWarning + ' — press x to reveal', cpNsfw, False, -1)
+      else
+        AddLine('🔞 NSFW content hidden — press x to reveal', cpNsfw, False, -1);
+    end
     else
     begin
       AddMarkdown(CleanImageMarkdown(entry.Content), '', -1, textW);
@@ -490,6 +502,11 @@ var
   var
     url, lbl: string;
   begin
+    if Gated then
+    begin
+      Info('Reveal content first (x).');
+      Exit;
+    end;
     if not AudioAt(n, url, lbl) then
       Exit; // out of range: ignore
     if PlayAudio(url, lbl) then
@@ -521,6 +538,8 @@ var
       StopAudio;
       Info('Stopped.');
     end
+    else if Gated then
+      Info('Reveal content first (x).') // don't expose attachments/links while gated
     else if AudioCount >= 1 then
       PlayTrack(1)
     else
@@ -594,7 +613,10 @@ var
     else
       wtag := '';
     if Gated then
-      hsum := '[NSFW hidden]'
+      if Trim(entry.ContentWarning) <> '' then
+        hsum := 'CW: ' + entry.ContentWarning
+      else
+        hsum := '[NSFW hidden]'
     else
       hsum := EntrySummary(entry);
     DrawBar(0, cpHeader, ' thread' + wtag + '   ·   @' + entry.AuthorUsername +
@@ -627,7 +649,7 @@ var
         status := status + ' · w unwatch'
       else
         status := status + ' · w watch';
-      if sess.FilterNSFW and entry.IsNSFW then
+      if Gateable then
         if revealed then
           status := status + ' · x hide'
         else
@@ -721,7 +743,7 @@ begin
         end;
       Ord('i'):
         if Gated then
-          Info('Reveal NSFW content first (x).')
+          Info('Reveal content first (x).')
         else if Length(images) > 0 then
           ViewImages(images)
         else
@@ -749,7 +771,7 @@ begin
       Ord('1')..Ord('9'):
         PlayTrack(key - Ord('0'));
       Ord('x'):
-        if sess.FilterNSFW and entry.IsNSFW then
+        if Gateable then
         begin
           revealed := not revealed;
           BuildLines; // re-render body/images with the new gate state
@@ -758,7 +780,7 @@ begin
         begin
           if selReply = -1 then
           begin
-            if ComposeReply(sess, entry.PostId, EntrySummary(entry)) then
+            if ComposeReply(sess, entry.PostId, ListSummary(entry)) then
               Result := True;
           end
           else if ComposeReplyTo(sess, entry.PostId, replies[selReply].ReplyId,

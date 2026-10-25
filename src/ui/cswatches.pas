@@ -119,7 +119,7 @@ var
       Exit;
     end;
     if FetchEntryById(sess, items[idx].PostId, e, ferr) then
-      items[idx].Display := '@' + e.AuthorUsername + '  ·  ' + EntrySummary(e)
+      items[idx].Display := '@' + e.AuthorUsername + '  ·  ' + ListSummary(e)
     else
       items[idx].Display := '(unavailable) ' + items[idx].PostId;
   end;

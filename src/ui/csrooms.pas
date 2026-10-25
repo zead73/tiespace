@@ -84,6 +84,7 @@ var
   heartbeatMs, staleAfterMs, idleAfterMs: Integer;
   lastBeat: TDateTime;
   lastActivityMs: Int64; // ms epoch of our last keypress, reported on heartbeat
+  noMoreHistory: Boolean; // older fetch came back empty (API 0.9.0 caps scrollback)
 
   function MaxTop: Integer;
   begin
@@ -196,6 +197,10 @@ var
     if older and (Length(msgs) > 0) then
       before := IntToStr(msgs[0].Timestamp);
     batch := FetchHistory(sess, roomId, before, err);
+    // Scrollback is capped (newest 1000 / <180 days): once an older page comes
+    // back empty with no error, stop re-requesting it on every up-press.
+    if older and (err = '') and (Length(batch) = 0) then
+      noMoreHistory := True;
     if not older then
       msgs := batch
     else if Length(batch) > 0 then
@@ -490,7 +495,7 @@ var
       if top < 0 then
         top := 0;
     end
-    else
+    else if not noMoreHistory then
     begin
       LoadHistory(True); // at the top already: pull older history
       SortMsgs;
@@ -510,12 +515,13 @@ var
     sends "/help". Scrollable; any non-scroll key closes. }
   procedure ShowCommandHelp;
   const
-    CMDS: array[0..16] of string = (
+    CMDS: array[0..17] of string = (
       '  /me <action>              a third-person action',
       '  /poke /hug /hi5 /slap [@user]   emote at someone (or solo)',
       '  /dice <notation>          roll dice: 4d6kh3, 2d6+3, adv, d%',
       '  /8ball <question>         ask the magic 8-ball',
       '  /fortune                  a random fortune cookie',
+      '  /localtime HH:MM          post your local time (24h)',
       '  /gif <https url>          post an animated GIF (must be a GIF)',
       '  /song <yt> | artist | title    jukebox track (supporter only)',
       '  /art <ascii art>          ASCII art — cIRC only, 80x25 max',
@@ -736,6 +742,7 @@ begin
     on E: Exception do ;
   end;
 
+  noMoreHistory := False;
   LoadHistory(False);
   BuildLines;
   visible := ScreenRows - 2;

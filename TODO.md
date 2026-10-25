@@ -48,6 +48,17 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       session, kept in sync when Settings saves). Centralised `FeedSummary` masks NSFW
       rows to `[NSFW hidden]` across feed/profile/topics/guilds; the thread view gates an
       NSFW entry's title/body/images behind `x` reveal (and blocks `i` until revealed).
+- [x] **Content warnings (API 0.9.0)** — `TEntry.ContentWarning` parsed from
+      `contentWarning`; new `ListSummary` masks list/search teasers to `CW: <warning>`
+      (feed/profile/topics/guilds via `FeedSummary`, plus search, bookmarks and watches).
+      The thread view gates
+      a CW entry's title/body/attachments behind `x` reveal — always, regardless of the
+      NSFW filter (it's the author's own warning) — reusing the NSFW reveal affordance
+      (`Gateable`/`Gated`); `i`, `o` and `1`–`9` playback are blocked until revealed.
+      Model gating unit-tested.
+- [x] **cIRC 0.9.0 nits** — `/localtime HH:MM` added to the `/help` reference; cIRC
+      scrollback latches "no more history" when an older page returns empty (0.9.0 caps
+      history to newest 1000 / <180 days), so up-presses at the wall stop re-requesting.
 - [x] **Richer markdown rendering** — new `ui/csmarkdown.pas` renders decoded content
       into styled runs (bold, italic→underline, `code`, links, headings, `-`/`1.` lists,
       `>` quotes, `---` rules); CsUI gained a run/underline draw path (`TStyleRuns`,

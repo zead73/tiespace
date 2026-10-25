@@ -34,7 +34,7 @@ markers, and select mode (`Tab`) for acting on a message.*
 
 ## Status
 
-A working, human-driven client, current with the **Cyberspace API v0.8.12**
+A working, human-driven client, current with the **Cyberspace API v0.9.0**
 and confirmed against a live account.
 
 **Auth** — in-TUI login (`Q` logs out to it; OPTIONAL reads the password from `~/.cs-pw`,
@@ -90,6 +90,11 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - NSFW filtering: with **Filter NSFW** on (Settings), NSFW posts read as
   `[NSFW hidden]` in every list, and an NSFW thread's title/body/images stay
   hidden until you reveal them (`x`, per thread)
+- content warnings: an entry its author tagged with a content warning shows
+  `CW: <warning>` in lists, search and the thread header, with its title, body
+  and attachments kept hidden until you reveal them (`x`, per thread). Unlike
+  NSFW this is the author's own warning, so it always gates regardless of the
+  NSFW-filter setting
 
 > **Note on editing (`e`).** The Cyberspace API only allows editing an entry or
 > reply **for supporter accounts, within 5 minutes of posting**, and this client

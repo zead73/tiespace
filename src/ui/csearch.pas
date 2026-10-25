@@ -109,7 +109,7 @@ var
             if TJSONArray(arr).Items[i] is TJSONObject then
             begin
               e := ParseEntry(TJSONObject(TJSONArray(arr).Items[i]));
-              AddItem(skPost, '[post]  @' + e.AuthorUsername + '  ·  ' + EntrySummary(e),
+              AddItem(skPost, '[post]  @' + e.AuthorUsername + '  ·  ' + ListSummary(e),
                 e.AuthorUsername, e.PostId, e);
             end;
         arr := d.Find('replies');
