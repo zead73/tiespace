@@ -98,10 +98,12 @@ remembers the email), session restore, token refresh, `0600` credential file.
   NSFW-filter setting
 
 > **Note on editing (`e`).** The Cyberspace API only allows editing an entry or
-> reply **for supporter accounts, within 5 minutes of posting**, and this client
-> edits the **body/content** only (not title, topics, or the NSFW flag). The
-> 5-minute window and supporter requirement are enforced by the server, so on a
-> non-supporter account the save returns a `403`, which the client surfaces.
+> reply **for supporter accounts, within 5 minutes of posting**. Editing an
+> entry changes its **body** and its **content warning** (leave the warning
+> unchanged with Esc, or clear it to remove it); editing a reply changes the
+> **body** only. Title, topics and the NSFW flag aren't editable from the client.
+> The 5-minute window and supporter requirement are enforced by the server, so on
+> a non-supporter account the save returns a `403`, which the client surfaces.
 > Because the development account isn't a supporter, **this path is unverified
 > against a live edit** — the request shape follows the API docs, but it hasn't
 > been exercised end to end.

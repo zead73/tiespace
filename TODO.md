@@ -57,8 +57,11 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       (`Gateable`/`Gated`); `i`, `o` and `1`–`9` playback are blocked until revealed.
       Model gating unit-tested. Compose side: the new-entry composer prompts for an
       optional content warning (`CreateEntry` sends `contentWarning` on `POST /v1/posts`),
-      shown as a banner in the review. (Editing an existing post's CW via PATCH is not
-      wired up — the edit flow stays content-only, as documented.)
+      shown as a banner in the review. Editing an entry (`e`) also edits its content
+      warning: the prompt is pre-filled with the current warning (Esc keeps it, clearing
+      removes it) and `EditEntry` sends `contentWarning` on `PATCH /v1/posts/:id`. Reply
+      edits stay content-only (replies have no CW). The edit path is supporter/5-min
+      gated server-side, so it's unverified against a live edit.
 - [x] **cIRC 0.9.0 nits** — `/localtime HH:MM` added to the `/help` reference; cIRC
       scrollback latches "no more history" when an older page returns empty (0.9.0 caps
       history to newest 1000 / <180 days), so up-presses at the wall stop re-requesting.

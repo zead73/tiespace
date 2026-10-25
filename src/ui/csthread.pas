@@ -565,7 +565,7 @@ var
         Fail('This entry was deleted.');
         Exit;
       end;
-      if EditEntryContent(sess, entry.PostId, entry.Content) then
+      if EditEntryContent(sess, entry.PostId, entry.Content, entry.ContentWarning) then
       begin
         // refetch so the new body + "· edited" marker show; keep old on failure
         if FetchEntryById(sess, entry.PostId, fresh, derr) then

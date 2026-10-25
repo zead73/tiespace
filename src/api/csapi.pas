@@ -41,7 +41,8 @@ function CreateReply(sess: TCsSession; const postId, content: string;
 
 { Edit the body of your own entry / reply (PATCH content). Server-gated: for
   supporters, within 5 minutes of posting — otherwise a 403 comes back in err. }
-function EditEntry(sess: TCsSession; const postId, content: string; out err: string): Boolean;
+function EditEntry(sess: TCsSession; const postId, content, contentWarning: string;
+  out err: string): Boolean;
 function EditReply(sess: TCsSession; const replyId, content: string; out err: string): Boolean;
 
 { Delete your own entry / reply. }
@@ -425,9 +426,30 @@ begin
   end;
 end;
 
-function EditEntry(sess: TCsSession; const postId, content: string; out err: string): Boolean;
+function EditEntry(sess: TCsSession; const postId, content, contentWarning: string;
+  out err: string): Boolean;
+var
+  body, env: TJSONObject;
 begin
-  Result := EditAt(sess, '/v1/posts/' + postId, content, err);
+  Result := False;
+  err := '';
+  body := TJSONObject.Create;
+  try
+    body.Add('content', content);
+    // Always send contentWarning on an entry edit so it can be set, changed or
+    // cleared ('' removes it, per the API 0.9.0 PATCH docs).
+    body.Add('contentWarning', Trim(contentWarning));
+    try
+      env := sess.Client.PatchJSONObj('/v1/posts/' + postId, body);
+      env.Free;
+      Result := True;
+    except
+      on E: ECsApi do err := '[' + E.Code + '] ' + E.Message;
+      on E: Exception do err := E.Message;
+    end;
+  finally
+    body.Free;
+  end;
 end;
 
 function EditReply(sess: TCsSession; const replyId, content: string; out err: string): Boolean;

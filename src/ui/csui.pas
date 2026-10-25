@@ -111,8 +111,10 @@ procedure UIInputTimeout(ms: Integer);
 function UIConfirm(const question: string): Boolean;
 
 { Single-line text prompt on the bottom row (editing, cursor, paste). Returns
-  True on Enter with `text` set, False on Esc. }
-function UIPromptLine(const prompt: string; out text: string): Boolean;
+  True on Enter with `text` set, False on Esc. `initial` pre-fills the field
+  (cursor at end) — handy for editing an existing value. }
+function UIPromptLine(const prompt: string; out text: string;
+  const initial: string = ''): Boolean;
 
 { Leave/re-enter curses so an external full-screen program (e.g. an image
   viewer) can own the terminal, then repaint. UISuspend restores cooked mode;
@@ -709,13 +711,14 @@ begin
   end;
 end;
 
-function UIPromptLine(const prompt: string; out text: string): Boolean;
+function UIPromptLine(const prompt: string; out text: string;
+  const initial: string = ''): Boolean;
 var
   cur, key, avail, promptW, curCol, startCol, p: Integer;
   pv: string;
 begin
-  text := '';
-  cur := 0;
+  text := initial;
+  cur := Length(text);
   promptW := VisibleWidth(prompt) + 1;
   repeat
     DrawBar(ScreenRows - 1, cpText, '');

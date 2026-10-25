@@ -32,7 +32,7 @@ function EditNote(sess: TCsSession; const noteId, startContent, keepTopics: stri
 { Edit the body of an existing entry / reply, pre-filled with its current text
   (content only). The server allows this for supporters within 5 minutes of
   posting; otherwise the save comes back with a 403. Returns True if saved. }
-function EditEntryContent(sess: TCsSession; const postId, startContent: string): Boolean;
+function EditEntryContent(sess: TCsSession; const postId, startContent, startCW: string): Boolean;
 function EditReplyContent(sess: TCsSession; const replyId, startContent: string): Boolean;
 
 implementation
@@ -338,6 +338,30 @@ begin
   end;
 end;
 
+{ Prompt for a content warning, enforcing the API's 60-char cap client-side (so
+  an over-length one never costs a round-trip or a full retype). `preset`
+  pre-fills the field and is the value kept if the user presses Esc ('' when
+  composing; the current warning when editing). Pass a result variable distinct
+  from `preset` so the out-clear doesn't wipe it. }
+procedure PromptContentWarning(const prompt, preset: string; out cw: string);
+var
+  seed: string;
+begin
+  seed := preset;
+  repeat
+    if not UIPromptLine(prompt, cw, seed) then
+    begin
+      cw := preset; // Esc: keep the preset unchanged
+      Exit;
+    end;
+    cw := Trim(cw);
+    if CodepointCount(cw) <= 60 then
+      Exit;
+    ShowMsg('Content warning too long (max 60 characters).');
+    seed := cw; // keep what they typed so they can trim it
+  until False;
+end;
+
 function SendLoop(sess: TCsSession; const header, action: string;
   isReply: Boolean; const postId, parentReplyId: string;
   const guildSlug: string = ''): Boolean;
@@ -376,16 +400,9 @@ begin
       if guildSlug = '' then
       begin
         // guild threads take neither a content warning, an NSFW flag, nor a
-        // public/private choice. Validate the CW length here (server caps it at
-        // 60) so an over-length one doesn't cost a round-trip and a full retype.
-        repeat
-          if not UIPromptLine('Content warning (optional, Esc to skip, max 60):', cw) then
-            cw := '';
-          cw := Trim(cw);
-          if CodepointCount(cw) <= 60 then
-            Break;
-          ShowMsg('Content warning too long (max 60 characters).');
-        until False;
+        // public/private choice.
+        PromptContentWarning('Content warning (optional, Esc to skip, max 60):',
+          '', cw);
         nsfw := AskNSFW;
         vis := AskPublic;
       end;
@@ -530,13 +547,16 @@ begin
 end;
 
 { Shared body for editing an entry or a reply: the content editor pre-filled,
-  then PATCH content. kind is 'entry' or 'reply'. }
-function EditPost(sess: TCsSession; const header, kind, id, startContent: string): Boolean;
+  then PATCH. kind is 'entry' or 'reply'. For an entry, the content warning is
+  also editable (pre-filled with startCW); replies have none. }
+function EditPost(sess: TCsSession; const header, kind, id, startContent,
+  startCW: string): Boolean;
 var
-  buffer, err, msg: string;
+  buffer, cw, cwNew, reviewBody, err, msg: string;
 begin
   Result := False;
   buffer := startContent;
+  cw := startCW;
   repeat
     if not EditText(header, buffer) then
       Exit(False); // Esc: cancelled
@@ -550,16 +570,28 @@ begin
       ShowMsg('Too long (max ' + IntToStr(MAX_CHARS) + ' characters).');
       Continue;
     end;
+    // Entries can also change their content warning (Esc leaves it unchanged).
+    // cwNew is distinct from cw (the preset) so the out-clear can't wipe it.
+    if kind = 'entry' then
+    begin
+      PromptContentWarning('Content warning (Esc keeps the shown value, max 60):',
+        cw, cwNew);
+      cw := cwNew;
+    end;
     if not Limiter.Check('edit', msg) then
     begin
       ShowMsg(msg);
       Continue;
     end;
-    if ConfirmReview(' Review — edit ' + kind, buffer,
+    if (kind = 'entry') and (Trim(cw) <> '') then
+      reviewBody := '[content warning: ' + Trim(cw) + ']' + #10 + #10 + buffer
+    else
+      reviewBody := buffer;
+    if ConfirmReview(' Review — edit ' + kind, reviewBody,
       ' Save changes?    [y] save     [n] keep editing') then
     begin
       if kind = 'entry' then
-        Result := EditEntry(sess, id, buffer, err)
+        Result := EditEntry(sess, id, buffer, cw, err)
       else
         Result := EditReply(sess, id, buffer, err);
       if Result then
@@ -574,16 +606,16 @@ begin
   until False;
 end;
 
-function EditEntryContent(sess: TCsSession; const postId, startContent: string): Boolean;
+function EditEntryContent(sess: TCsSession; const postId, startContent, startCW: string): Boolean;
 begin
   Result := EditPost(sess, 'Edit entry — supporters, within 5 min of posting',
-    'entry', postId, startContent);
+    'entry', postId, startContent, startCW);
 end;
 
 function EditReplyContent(sess: TCsSession; const replyId, startContent: string): Boolean;
 begin
   Result := EditPost(sess, 'Edit reply — supporters, within 5 min of posting',
-    'reply', replyId, startContent);
+    'reply', replyId, startContent, '');
 end;
 
 end.
