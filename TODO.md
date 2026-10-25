@@ -55,7 +55,10 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       a CW entry's title/body/attachments behind `x` reveal — always, regardless of the
       NSFW filter (it's the author's own warning) — reusing the NSFW reveal affordance
       (`Gateable`/`Gated`); `i`, `o` and `1`–`9` playback are blocked until revealed.
-      Model gating unit-tested.
+      Model gating unit-tested. Compose side: the new-entry composer prompts for an
+      optional content warning (`CreateEntry` sends `contentWarning` on `POST /v1/posts`),
+      shown as a banner in the review. (Editing an existing post's CW via PATCH is not
+      wired up — the edit flow stays content-only, as documented.)
 - [x] **cIRC 0.9.0 nits** — `/localtime HH:MM` added to the `/help` reference; cIRC
       scrollback latches "no more history" when an older page returns empty (0.9.0 caps
       history to newest 1000 / <180 days), so up-presses at the wall stop re-requesting.

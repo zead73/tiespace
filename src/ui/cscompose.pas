@@ -342,7 +342,7 @@ function SendLoop(sess: TCsSession; const header, action: string;
   isReply: Boolean; const postId, parentReplyId: string;
   const guildSlug: string = ''): Boolean;
 var
-  buffer, newId, err, msg, title, topics, visSuffix: string;
+  buffer, newId, err, msg, title, topics, cw, visSuffix, reviewBody: string;
   nsfw: Boolean;
   vis: TPostVisibility;
 begin
@@ -350,6 +350,7 @@ begin
   buffer := '';
   title := '';
   topics := '';
+  cw := '';
   nsfw := False;
   vis := pvDefault;
   repeat
@@ -374,8 +375,19 @@ begin
         topics := '';
       if guildSlug = '' then
       begin
-        nsfw := AskNSFW; // guild threads have no NSFW flag
-        vis := AskPublic; // ...nor a public/private choice
+        // guild threads take neither a content warning, an NSFW flag, nor a
+        // public/private choice. Validate the CW length here (server caps it at
+        // 60) so an over-length one doesn't cost a round-trip and a full retype.
+        repeat
+          if not UIPromptLine('Content warning (optional, Esc to skip, max 60):', cw) then
+            cw := '';
+          cw := Trim(cw);
+          if CodepointCount(cw) <= 60 then
+            Break;
+          ShowMsg('Content warning too long (max 60 characters).');
+        until False;
+        nsfw := AskNSFW;
+        vis := AskPublic;
       end;
     end;
     if not Limiter.Check(action, msg) then
@@ -387,14 +399,20 @@ begin
       visSuffix := '   ·   ' + VisLabel(vis) // only entries have a visibility choice
     else
       visSuffix := '';
-    if ConfirmPost(buffer, sess.Username, visSuffix) then
+    // Show the content warning in the review (as a banner above the body) so it
+    // can be confirmed; it's metadata, not part of the posted content.
+    if Trim(cw) <> '' then
+      reviewBody := '[content warning: ' + Trim(cw) + ']' + #10 + #10 + buffer
+    else
+      reviewBody := buffer;
+    if ConfirmPost(reviewBody, sess.Username, visSuffix) then
     begin
       if isReply then
         Result := CreateReply(sess, postId, buffer, newId, err, parentReplyId)
       else if guildSlug <> '' then
         Result := CreateGuildThread(sess, guildSlug, buffer, newId, err, title, topics)
       else
-        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw, vis);
+        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw, vis, cw);
       if Result then
       begin
         Limiter.Note(action);

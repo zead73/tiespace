@@ -58,12 +58,13 @@ remembers the email), session restore, token refresh, `0600` credential file.
   `yt-dlp`) while you keep browsing — the feed header shows what's playing, and
   `o` there stops it. On a post with no audio, `o` **opens** the selected item's
   first link in your browser (`xdg-open`)
-- compose: multi-line UTF-8 editor (new entries can add an optional title, up
-  to 3 topics, an NSFW flag, and a **visibility** choice — public (visible
+- compose: multi-line UTF-8 editor (new entries can add an optional title and up
+  to 3 topics, and — for feed entries, not guild threads — an optional
+  **content warning**, an NSFW flag, and a **visibility** choice: public (visible
   without login), private, or your account default), `Ctrl+G` review + confirm
-  (the review header shows the chosen visibility), rate-limited; all text inputs
-  accept terminal paste (bracketed paste). The thread header marks an entry
-  `· public`/`· private` so you can see it before sharing
+  (the review shows the chosen visibility and any content-warning banner),
+  rate-limited; all text inputs accept terminal paste (bracketed paste). The
+  thread header marks an entry `· public`/`· private` so you can see it before sharing
 - notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
 - profile view (`p`): bio, stats, links, the user's guilds (their member guild
   plus any apprenticeships), and their entries; `f` follow/unfollow, `P` poke (a
