@@ -18,11 +18,6 @@ comes near.
 
 *The feed — the paginated post list you land on after login.*
 
-![A thread](screenshots/tiespace-thread1.png)
-
-*A thread — the entry with its title, topics and body, replies below, and the
-`👁 watching` indicator in the header.*
-
 ![cIRC room list](screenshots/tiespace-chat1.png)
 
 *cIRC — the room list, with per-room online counts and last activity.*
