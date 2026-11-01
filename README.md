@@ -49,8 +49,9 @@ remembers the email), session restore, token refresh, `0600` credential file.
   profile; `i` view post images / image attachments (shells out to `chafa`); `w`
   watch/unwatch the thread (a 👁 marks a watched thread). Audio/jukebox
   attachments show as a numbered text line; `o` plays the first (or `1`–`9` picks
-  a track when a post has several) in the **background** (shells out to `mpv` +
-  `yt-dlp`) while you keep browsing — the feed header shows what's playing, and
+  a track when a post has several) in the **background** (runs `yt-dlp | mpv` via
+  `setsid` — yt-dlp fetches, mpv plays, because a direct mpv fetch of a YouTube
+  stream now gets a 403) while you keep browsing — the feed header shows what's playing, and
   `o` there stops it. On a post with no audio, `o` **opens** the selected item's
   first link in your browser (`xdg-open`)
 - compose: multi-line UTF-8 editor (new entries can add an optional title and up
@@ -171,8 +172,9 @@ Release.
 To run it: `./tiespace-x86_64.AppImage`. AppImages need **FUSE** to self-mount —
 if it won't start, either install `libfuse2` or run
 `./tiespace-x86_64.AppImage --appimage-extract-and-run`. The optional
-`chafa`/`mpv`/`yt-dlp`/`xdg-open` helpers are **not** bundled; install them on the
-host if you want images, audio, or link-opening. `--version` prints the build
+`chafa`/`mpv`/`yt-dlp`/`setsid`/`xdg-open` helpers are **not** bundled; install them
+on the host if you want images, audio, or link-opening (`setsid`, from util-linux,
+is used to run the `yt-dlp | mpv` audio pipeline). `--version` prints the build
 version (release binaries report their tag; a plain local build says `dev`); the
 in-app `?` help screen shows it too.
 
@@ -180,7 +182,7 @@ in-app `?` help screen shows it too.
 
 Native on **Linux** and the **BSDs** — anywhere with FPC 3.2.2, wide ncurses,
 OpenSSL 3 (the `-dev`/`-devel` package — see [Build](#build)), and (optional)
-`chafa` for images plus `mpv` + `yt-dlp` for playing audio attachments. There is **no native Windows build**: the UI
+`chafa` for images plus `mpv` + `yt-dlp` + `setsid` for playing audio attachments. There is **no native Windows build**: the UI
 is built on ncurses and a few POSIX calls (`wcwidth`, Unix file-mode bits,
 `fpSystem`), so on Windows you run it under **WSL**.
 

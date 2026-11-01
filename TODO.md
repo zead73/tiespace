@@ -65,6 +65,11 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
 - [x] **cIRC 0.9.0 nits** — `/localtime HH:MM` added to the `/help` reference; cIRC
       scrollback latches "no more history" when an older page returns empty (0.9.0 caps
       history to newest 1000 / <180 days), so up-presses at the wall stop re-requesting.
+- [x] **Audio playback fix (`o`)** — YouTube now 403s a direct mpv/ffmpeg fetch of a
+      resolved stream, so `o` went silent. `csplayer` now runs `yt-dlp -o - <url> | mpv -`
+      (yt-dlp fetches, mpv plays stdin) via `setsid`, so `StopAudio` can `kill(-pgid)` the
+      whole pipeline, not just the shell. `--no-playlist` + `bestaudio/best` cover radio
+      URLs and direct (latex-origin) files; both legs silence stderr. New dep: `setsid`.
 - [x] **Richer markdown rendering** — new `ui/csmarkdown.pas` renders decoded content
       into styled runs (bold, italic→underline, `code`, links, headings, `-`/`1.` lists,
       `>` quotes, `---` rules); CsUI gained a run/underline draw path (`TStyleRuns`,
