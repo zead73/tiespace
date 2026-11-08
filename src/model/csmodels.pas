@@ -198,6 +198,10 @@ function DecodeEntities(const s: string): string;
   it falls within [lo, hi]. Returns False on non-numeric input or out of range. }
 function ParseCoord(const s: string; lo, hi: Double; out v: Double): Boolean;
 
+{ Parse a "lat, long" pair (comma- or whitespace-separated, as pasted from a map)
+  into lat (-90..90) and lon (-180..180). False unless both parse and are in range. }
+function ParseLatLon(const s: string; out lat, lon: Double): Boolean;
+
 implementation
 
 uses
@@ -835,6 +839,26 @@ begin
   fs.DecimalSeparator := '.';
   fs.ThousandSeparator := #0;
   Result := TryStrToFloat(Trim(s), v, fs) and (v >= lo) and (v <= hi);
+end;
+
+function ParseLatLon(const s: string; out lat, lon: Double): Boolean;
+var
+  t, a, b: string;
+  p: Integer;
+begin
+  Result := False;
+  lat := 0;
+  lon := 0;
+  t := Trim(s);
+  // Split on a comma if present (the usual map format), else on the first space.
+  p := Pos(',', t);
+  if p = 0 then
+    p := Pos(' ', t);
+  if p = 0 then
+    Exit; // need two values
+  a := Trim(Copy(t, 1, p - 1));
+  b := Trim(Copy(t, p + 1, MaxInt));
+  Result := ParseCoord(a, -90, 90, lat) and ParseCoord(b, -180, 180, lon);
 end;
 
 end.

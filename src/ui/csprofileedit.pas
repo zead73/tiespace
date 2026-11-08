@@ -122,20 +122,12 @@ var
           begin
             seed := '';
             repeat
-              if not UIPromptLine('Latitude (-90..90, decimal point; Esc cancels):', s, seed) then
+              if not UIPromptLine('Coordinates as "lat, long" (e.g. 43.8971, -78.8658; Esc cancels):',
+                                  s, seed) then
                 Exit(caKeep);
-              if ParseCoord(s, -90, 90, lat) then
+              if ParseLatLon(s, lat, lon) then
                 Break;
-              ShowMsg('Latitude must be a number between -90 and 90.');
-              seed := Trim(s);
-            until False;
-            seed := '';
-            repeat
-              if not UIPromptLine('Longitude (-180..180, decimal point; Esc cancels):', s, seed) then
-                Exit(caKeep);
-              if ParseCoord(s, -180, 180, lon) then
-                Break;
-              ShowMsg('Longitude must be a number between -180 and 180.');
+              ShowMsg('Enter latitude and longitude, e.g. 43.8971, -78.8658  (lat -90..90, long -180..180).');
               seed := Trim(s);
             until False;
             Exit(caSet);

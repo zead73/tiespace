@@ -218,6 +218,19 @@ begin
   EqB(ParseCoord('', -90, 90, v), False, 'ParseCoord: empty rejected');
 end;
 
+procedure TestParseLatLon;
+var la, lo: Double;
+begin
+  EqB(ParseLatLon('43.897095, -78.865791', la, lo), True, 'ParseLatLon: comma-separated pair');
+  EqB((Abs(la - 43.897095) < 1e-6) and (Abs(lo + 78.865791) < 1e-6), True,
+      'ParseLatLon: values parsed correctly');
+  EqB(ParseLatLon('43.897095 -78.865791', la, lo), True, 'ParseLatLon: space-separated pair');
+  EqB(ParseLatLon('51.5074', la, lo), False, 'ParseLatLon: single value rejected (needs two)');
+  EqB(ParseLatLon('91, 10', la, lo), False, 'ParseLatLon: latitude out of range');
+  EqB(ParseLatLon('10, 200', la, lo), False, 'ParseLatLon: longitude out of range');
+  EqB(ParseLatLon('a, b', la, lo), False, 'ParseLatLon: non-numeric rejected');
+end;
+
 procedure TestRateLimit;
 var m: string; i: Integer;
 begin
@@ -486,6 +499,7 @@ begin
   TestEntrySummary;
   TestRelativeTime;
   TestParseCoord;
+  TestParseLatLon;
   TestRateLimit;
   TestLayout;
   TestMarkdown;
