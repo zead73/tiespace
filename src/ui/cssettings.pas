@@ -19,10 +19,11 @@ procedure RunSettings(sess: TCsSession);
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsConfig, CsRateLimit, CsKeys;
+  SysUtils, fpjson, ncurses, CsHttp, CsUI, CsConfig, CsRateLimit, CsKeys,
+  CsProfileEdit;
 
 type
-  TSetKind = (skBool, skNotif, skTheme, skKeys);
+  TSetKind = (skBool, skNotif, skTheme, skKeys, skProfile);
   TSetItem = record
     Key: string;      // JSON key (top-level) or notifications sub-key
     Caption: string;
@@ -74,7 +75,8 @@ var
   begin
     SetLength(items, 0);
     err := '';
-    // Local (client-side) prefs, not server settings.
+    // Account action + local (client-side) prefs, not server settings.
+    AddItem('__profile__', 'Edit profile', skProfile, False);
     AddItem('__theme__', 'Theme', skTheme, False);
     AddItem('__keys__', 'Keybindings', skKeys, False);
     try
@@ -117,6 +119,14 @@ var
   begin
     if (sel < 0) or (sel > High(items)) then
       Exit;
+    if items[sel].Kind = skProfile then
+    begin
+      // Open the profile editor; it does its own PATCH and messaging.
+      EditOwnProfile(sess);
+      flash := '';
+      flashErr := False;
+      Exit;
+    end;
     if items[sel].Kind = skTheme then
     begin
       // Cycle the colour theme; applied live and saved locally right away.
@@ -222,7 +232,9 @@ var
       idx := top + i;
       if idx <= High(items) then
       begin
-        if items[idx].Kind = skTheme then
+        if items[idx].Kind = skProfile then
+          row := 'Edit profile…   (Enter: name, bio, links, globe location)'
+        else if items[idx].Kind = skTheme then
           row := 'Theme:  ' + ThemeName(CurrentThemeIndex) + '   (Space cycles)'
         else if items[idx].Kind = skKeys then
           row := 'Keybindings…   (Enter to edit feed keys)'

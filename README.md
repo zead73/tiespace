@@ -66,7 +66,8 @@ remembers the email), session restore, token refresh, `0600` credential file.
   plus any apprenticeships), and their entries; `f` follow/unfollow, `P` poke (a
   nudge notification; 1/hour). On **your own** profile, `e` opens a profile
   editor — display name, bio (multi-line), website URL + name, location name, and
-  the **map coordinates** that place you on the Cyberspace globe. Fields pre-fill
+  the **map coordinates** that place you on the Cyberspace globe (also reachable
+  from **Settings → Edit profile**). Fields pre-fill
   with their current value (Esc leaves one unchanged, clearing it removes it);
   coordinates are entered fresh since the API doesn't return them. Changes are
   reviewed before a single `PATCH /v1/users/me` (rate-limited 2/min, 15/day)
