@@ -206,6 +206,18 @@ begin
   EqS(RelativeTime('garbage'), 'garbage', 'RelativeTime: unparseable -> first chars');
 end;
 
+procedure TestParseCoord;
+var v: Double;
+begin
+  EqB(ParseCoord('51.5074', -90, 90, v), True, 'ParseCoord: latitude in range');
+  EqB(ParseCoord('-0.1278', -180, 180, v), True, 'ParseCoord: longitude in range (neg, point-decimal)');
+  EqB(ParseCoord('90', -90, 90, v), True, 'ParseCoord: boundary accepted');
+  EqB(ParseCoord('91', -90, 90, v), False, 'ParseCoord: latitude out of range');
+  EqB(ParseCoord('-200', -180, 180, v), False, 'ParseCoord: longitude out of range');
+  EqB(ParseCoord('abc', -90, 90, v), False, 'ParseCoord: non-numeric rejected');
+  EqB(ParseCoord('', -90, 90, v), False, 'ParseCoord: empty rejected');
+end;
+
 procedure TestRateLimit;
 var m: string; i: Integer;
 begin
@@ -473,6 +485,7 @@ begin
   TestParsers;
   TestEntrySummary;
   TestRelativeTime;
+  TestParseCoord;
   TestRateLimit;
   TestLayout;
   TestMarkdown;

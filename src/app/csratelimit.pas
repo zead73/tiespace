@@ -70,6 +70,7 @@ begin
     'guild_promote': begin perMin := 3; perDay := 15; end;
     'watch': begin perMin := 10; perDay := 100; end;
     'settings': begin perMin := 2; perDay := 15; end;
+    'profile': begin perMin := 2; perDay := 15; end; // PATCH /v1/users/me
     'flag': begin perMin := 5; perDay := 50; end; // shared budget; 20/hr is server-side
     'poke': begin perHour := 1; perDay := 8; end; // across all users, not per user
   else

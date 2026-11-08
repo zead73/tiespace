@@ -64,7 +64,12 @@ remembers the email), session restore, token refresh, `0600` credential file.
 - notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
 - profile view (`p`): bio, stats, links, the user's guilds (their member guild
   plus any apprenticeships), and their entries; `f` follow/unfollow, `P` poke (a
-  nudge notification; 1/hour)
+  nudge notification; 1/hour). On **your own** profile, `e` opens a profile
+  editor — display name, bio (multi-line), website URL + name, location name, and
+  the **map coordinates** that place you on the Cyberspace globe. Fields pre-fill
+  with their current value (Esc leaves one unchanged, clearing it removes it);
+  coordinates are entered fresh since the API doesn't return them. Changes are
+  reviewed before a single `PATCH /v1/users/me` (rate-limited 2/min, 15/day)
 - search (`/`): users, entries and replies — opens a hit's thread or profile
 - topics (`t`): browse topics, read the entries filed under one
 - bookmarks: `b` bookmark an entry, `B` open the list (rows resolve to the

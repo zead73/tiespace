@@ -35,6 +35,11 @@ function EditNote(sess: TCsSession; const noteId, startContent, keepTopics: stri
 function EditEntryContent(sess: TCsSession; const postId, startContent, startCW: string): Boolean;
 function EditReplyContent(sess: TCsSession; const replyId, startContent: string): Boolean;
 
+{ Edit an arbitrary multi-line value in the full-screen editor (e.g. a profile
+  bio). `header` titles the screen and `footer` is the status-line hint. The text
+  is pre-filled and edited in place; returns True on Ctrl+G (done), False on Esc. }
+function EditValue(const header, footer: string; var text: string): Boolean;
+
 implementation
 
 uses
@@ -183,8 +188,9 @@ begin
 end;
 
 { The editor. Returns True if the user asked to send (Ctrl+G), False on Esc.
-  buffer is edited in place. }
-function EditText(const headerText: string; var buffer: string): Boolean;
+  buffer is edited in place. `footer` is the status-line hint. }
+function EditText(const headerText: string; var buffer: string;
+  const footer: string = ' Ctrl+G: review & post     Esc: cancel'): Boolean;
 var
   cur, vtop, textW, areaH, crow, ccol: Integer;
   rows: TWrapRows;
@@ -220,7 +226,7 @@ var
         DrawText(1 + i, 1, cpText, rows[vtop + i].Text);
     DrawBar(ScreenRows - 2, cpMeta, Format('  %d chars   ·   line %d/%d',
       [CodepointCount(buffer), crow + 1, Length(rows)]));
-    DrawBar(ScreenRows - 1, cpStatus, ' Ctrl+G: review & post     Esc: cancel');
+    DrawBar(ScreenRows - 1, cpStatus, footer);
     UICursorVisible(True);
     UIPlaceCursor(1 + (crow - vtop), 1 + ccol);
     UIRefresh;
@@ -616,6 +622,11 @@ function EditReplyContent(sess: TCsSession; const replyId, startContent: string)
 begin
   Result := EditPost(sess, 'Edit reply — supporters, within 5 min of posting',
     'reply', replyId, startContent, '');
+end;
+
+function EditValue(const header, footer: string; var text: string): Boolean;
+begin
+  Result := EditText(header, text, footer);
 end;
 
 end.

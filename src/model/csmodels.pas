@@ -194,6 +194,10 @@ function RelativeTime(const isoUtc: string): string;
 { Decode HTML entities (&amp; &lt; &#39; …) into plain UTF-8 text. }
 function DecodeEntities(const s: string): string;
 
+{ Parse a decimal coordinate (a '.' decimal point, locale-independent) and check
+  it falls within [lo, hi]. Returns False on non-numeric input or out of range. }
+function ParseCoord(const s: string; lo, hi: Double; out v: Double): Boolean;
+
 implementation
 
 uses
@@ -818,6 +822,19 @@ begin
     Result := IntToStr(secs div (7 * 86400)) + 'w'
   else
     Result := Copy(isoUtc, 1, 10);
+end;
+
+function ParseCoord(const s: string; lo, hi: Double; out v: Double): Boolean;
+var
+  fs: TFormatSettings;
+begin
+  v := 0;
+  // Force a '.' decimal and no thousands grouping so parsing doesn't depend on
+  // the user's locale (where ',' might otherwise be the decimal separator).
+  fs := DefaultFormatSettings;
+  fs.DecimalSeparator := '.';
+  fs.ThousandSeparator := #0;
+  Result := TryStrToFloat(Trim(s), v, fs) and (v >= lo) and (v <= hi);
 end;
 
 end.

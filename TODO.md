@@ -6,6 +6,18 @@ the M4 "polish" bucket, tracked here so we can check items off as we land them.
 
 ## API-backed (endpoints exist; the client just doesn't use them yet)
 
+### Profile editing — PATCH /v1/users/me ✅ done (`e` on your own profile)
+- [x] `ui/csprofileedit.pas`: `EditOwnProfile` — fetches `/v1/users/me`, prompts for
+      display name, bio (multi-line via the exposed `CsCompose.EditValue`), website
+      URL (http/https) + name, location name, and globe lat/long (asked explicitly;
+      entered fresh since the API doesn't return coordinates). Only changed fields
+      are sent; an emptied field is sent as `null` to remove it; review before PATCH.
+- [x] `csmodels.ParseCoord` (locale-independent decimal + range), unit-tested
+- [x] `csratelimit`: new `profile` rule (2/min, 15/day)
+- [x] `csprofile.pas`: `e` opens the editor on your own profile, reloads on save
+- [x] README + this checklist. NOT verified against a live PATCH (avoids mutating a
+      real profile) — request shape follows the docs, like the edit-entry path.
+
 ### Notes — private notes with revision history ✅ done (feed key `N`)
 Private to you; editing creates a new revision rather than overwriting.
 - [x] `csapi`: get (`FetchNote`, `?revision=N`) / create / update (PATCH) / delete

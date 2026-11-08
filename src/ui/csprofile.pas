@@ -16,7 +16,8 @@ procedure RunProfile(sess: TCsSession; const username: string);
 implementation
 
 uses
-  SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsRateLimit, CsThread;
+  SysUtils, fpjson, ncurses, CsHttp, CsModels, CsUI, CsApi, CsRateLimit, CsThread,
+  CsProfileEdit;
 
 const
   PAGE = 20;
@@ -318,7 +319,7 @@ var
     UIErase;
     DrawBar(0, cpHeader, ' profile   ·   @' + username);
     if userId = sess.UserId then
-      fLabel := ''
+      fLabel := ' · e edit profile'
     else
     begin
       if iFollow then
@@ -412,6 +413,10 @@ begin
         DoFollowToggle;
       Ord('P'):
         DoPoke;
+      Ord('e'):
+        if userId = sess.UserId then
+          if EditOwnProfile(sess) then
+            LoadProfile; // refresh the header with the saved changes
       Ord('r'):
         begin
           err := '';
