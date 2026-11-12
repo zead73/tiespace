@@ -515,11 +515,12 @@ var
     sends "/help". Scrollable; any non-scroll key closes. }
   procedure ShowCommandHelp;
   const
-    CMDS: array[0..17] of string = (
+    CMDS: array[0..18] of string = (
       '  /me <action>              a third-person action',
       '  /poke /hug /hi5 /slap [@user]   emote at someone (or solo)',
       '  /dice <notation>          roll dice: 4d6kh3, 2d6+3, adv, d%',
       '  /8ball <question>         ask the magic 8-ball',
+      '  /coin                     flip a coin',
       '  /fortune                  a random fortune cookie',
       '  /localtime HH:MM          post your local time (24h)',
       '  /gif <https url>          post an animated GIF (must be a GIF)',
