@@ -181,8 +181,11 @@ if it won't start, either install `libfuse2` or run
 `chafa`/`mpv`/`yt-dlp`/`setsid`/`xdg-open` helpers are **not** bundled; install them
 on the host if you want images, audio, or link-opening (`setsid`, from util-linux,
 is used to run the `yt-dlp | mpv` audio pipeline). `--version` prints the build
-version (release binaries report their tag; a plain local build says `dev`); the
-in-app `?` help screen shows it too.
+version: a release binary reports its exact tag, and a local `make` build stamps
+it from `git describe` (e.g. `v0.11`, or `v0.11-3-gabc1234` when you're ahead of a
+tag) — only a build with no git available falls back to `dev`. The version string
+lives in `src/app/version.inc`, which `make` generates and is not tracked; the in-app
+`?` help screen shows the version too.
 
 ## Platforms
 

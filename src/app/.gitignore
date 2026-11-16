@@ -1,0 +1,4 @@
+# Generated at build time by the Makefile `version` target (git describe), and
+# overwritten by CI from the release tag. Not tracked, so a local build never
+# dirties the tree. CsVersion includes it; `make` always regenerates it.
+version.inc

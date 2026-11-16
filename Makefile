@@ -14,7 +14,7 @@ FLAGS  = -Mobjfpc -Sh -O2 -vw -vm5093,6058 \
          $(if $(CRTDIR),-Fl$(CRTDIR))
 BIN    = bin
 
-.PHONY: all app spike session test clean dirs appdir appimage appimage-release
+.PHONY: all app version spike session test clean dirs appdir appimage appimage-release
 
 # Targets share the build/ unit-output dir, so a parallel build (make -jN) could
 # race two fpc runs compiling the same units. Builds are sub-second; serialise.
@@ -22,8 +22,21 @@ BIN    = bin
 
 all: app test
 
-app: dirs
+app: version dirs
 	$(FPC) $(FLAGS) -o$(BIN)/tiespace src/tiespace.pas
+
+# Stamp src/app/version.inc (a Pascal string literal CsVersion includes) from
+# git, so a local build reports e.g. 'v0.11' or 'v0.11-3-gabc1234' instead of
+# 'dev'. version.inc is generated/untracked, so this never dirties the tree.
+# When git is unavailable (the release container) the file is left as-is — the
+# CI workflow pre-stamps it with the clean release tag — and only written as a
+# 'dev' fallback if it's somehow missing entirely.
+version:
+	@if command -v git >/dev/null 2>&1 && git describe --tags --always >/dev/null 2>&1; then \
+		printf "'%s'\n" "$$(git describe --tags --always)" > src/app/version.inc; \
+	elif [ ! -f src/app/version.inc ]; then \
+		printf "'dev'\n" > src/app/version.inc; \
+	fi
 
 spike: dirs
 	$(FPC) $(FLAGS) -o$(BIN)/spike_login src/spikes/spike_login.pas
