@@ -34,7 +34,8 @@ function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
   const topics: string = ''; const isNSFW: Boolean = False;
   const vis: TPostVisibility = pvDefault;
-  const contentWarning: string = ''): Boolean;
+  const contentWarning: string = '';
+  const repliesDisabled: Boolean = False): Boolean;
 { Create a reply to a post; pass parentReplyId to reply to a specific reply. }
 function CreateReply(sess: TCsSession; const postId, content: string;
   out replyId, err: string; const parentReplyId: string = ''): Boolean;
@@ -299,7 +300,8 @@ function CreateEntry(sess: TCsSession; const content: string;
   out postId, err: string; const title: string = '';
   const topics: string = ''; const isNSFW: Boolean = False;
   const vis: TPostVisibility = pvDefault;
-  const contentWarning: string = ''): Boolean;
+  const contentWarning: string = '';
+  const repliesDisabled: Boolean = False): Boolean;
 var
   body, env, d: TJSONObject;
 begin
@@ -317,6 +319,8 @@ begin
       body.Add('isNSFW', True);
     if Trim(contentWarning) <> '' then
       body.Add('contentWarning', Trim(contentWarning)); // server enforces <=60 chars
+    if repliesDisabled then
+      body.Add('repliesDisabled', True); // API 0.9.3; fixed once published
     case vis of
       pvPublic: body.Add('isPublic', True);
       pvPrivate: body.Add('isPublic', False);

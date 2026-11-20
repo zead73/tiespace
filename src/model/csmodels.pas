@@ -38,6 +38,7 @@ type
     BookmarksCount: Integer;
     IsNSFW: Boolean;
     ContentWarning: string; // author's short warning (API 0.9.0); '' when none
+    RepliesDisabled: Boolean; // API 0.9.3: set at post time, fixed after
     IsPublic: Boolean;
     Deleted: Boolean;
   end;
@@ -298,6 +299,7 @@ begin
   Result.BookmarksCount := o.Get('bookmarksCount', 0);
   Result.IsNSFW := o.Get('isNSFW', False);
   Result.ContentWarning := DecodeEntities(o.Get('contentWarning', ''));
+  Result.RepliesDisabled := o.Get('repliesDisabled', False);
   Result.IsPublic := o.Get('isPublic', False);
   Result.Deleted := o.Get('deleted', False);
   td := o.Find('topics');

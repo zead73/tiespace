@@ -56,11 +56,14 @@ remembers the email), session restore, token refresh, `0600` credential file.
   first link in your browser (`xdg-open`)
 - compose: multi-line UTF-8 editor (new entries can add an optional title and up
   to 3 topics, and — for feed entries, not guild threads — an optional
-  **content warning**, an NSFW flag, and a **visibility** choice: public (visible
-  without login), private, or your account default), `Ctrl+G` review + confirm
-  (the review shows the chosen visibility and any content-warning banner),
-  rate-limited; all text inputs accept terminal paste (bracketed paste). The
-  thread header marks an entry `· public`/`· private` so you can see it before sharing
+  **content warning**, an NSFW flag, a **disable-replies** choice (fixed once
+  published), and a **visibility** choice: public (visible without login),
+  private, or your account default), `Ctrl+G` review + confirm (the review shows
+  the chosen visibility and any content-warning banner), rate-limited; all text
+  inputs accept terminal paste (bracketed paste). The thread header marks an entry
+  `· public`/`· private`, `· replies off` when replies are disabled, so you can see
+  it before sharing; the thread view blocks a reply on a replies-disabled entry
+  rather than letting the server reject it
 - notifications (`n`): list, unread badge, mark-read / mark-all, open the thread
 - profile view (`p`): bio, stats, links, the user's guilds (their member guild
   plus any apprenticeships), and their entries; `f` follow/unfollow, `P` poke (a

@@ -155,6 +155,12 @@ begin
     'ParseEntry: contentWarning absent -> empty');
   EqS(PEntry('{"postId":"p4","contentWarning":"spoilers &amp; stuff"}').ContentWarning,
     'spoilers & stuff', 'ParseEntry: contentWarning decoded');
+
+  // repliesDisabled (API 0.9.3): absent -> false, present -> parsed.
+  EqB(PEntry('{"postId":"p5"}').RepliesDisabled, False,
+    'ParseEntry: repliesDisabled absent -> false');
+  EqB(PEntry('{"postId":"p6","repliesDisabled":true}').RepliesDisabled, True,
+    'ParseEntry: repliesDisabled parsed');
 end;
 
 procedure TestEntrySummary;

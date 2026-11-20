@@ -314,6 +314,24 @@ begin
   until False;
 end;
 
+{ Disable replies on a new entry (API 0.9.3): y = no replies, Enter/n/Esc = allow.
+  Fixed once published, so it's only offered at post time. }
+function AskRepliesDisabled: Boolean;
+var
+  k: LongInt;
+begin
+  Result := False;
+  DrawBar(ScreenRows - 1, cpStatus, ' Disable replies?    [y] yes    [Enter/n] no');
+  UIRefresh;
+  repeat
+    k := UIGetKey;
+    case k of
+      Ord('y'), Ord('Y'): Exit(True);
+      Ord('n'), Ord('N'), 10, 13, 27: Exit(False);
+    end;
+  until False;
+end;
+
 { Visibility for a new entry: p = public (visible without login), n = private,
   Enter/Esc = leave it to your account default (defaultPublicPost). }
 function AskPublic: TPostVisibility;
@@ -373,7 +391,7 @@ function SendLoop(sess: TCsSession; const header, action: string;
   const guildSlug: string = ''): Boolean;
 var
   buffer, newId, err, msg, title, topics, cw, visSuffix, reviewBody: string;
-  nsfw: Boolean;
+  nsfw, noReplies: Boolean;
   vis: TPostVisibility;
 begin
   Result := False;
@@ -382,6 +400,7 @@ begin
   topics := '';
   cw := '';
   nsfw := False;
+  noReplies := False;
   vis := pvDefault;
   repeat
     if not EditText(header, buffer) then
@@ -410,6 +429,7 @@ begin
         PromptContentWarning('Content warning (optional, Esc to skip, max 60):',
           '', cw);
         nsfw := AskNSFW;
+        noReplies := AskRepliesDisabled; // fixed once published
         vis := AskPublic;
       end;
     end;
@@ -419,7 +439,11 @@ begin
       Continue;
     end;
     if (not isReply) and (guildSlug = '') then
-      visSuffix := '   ·   ' + VisLabel(vis) // only entries have a visibility choice
+    begin
+      visSuffix := '   ·   ' + VisLabel(vis); // only entries have a visibility choice
+      if noReplies then
+        visSuffix := visSuffix + '   ·   replies off';
+    end
     else
       visSuffix := '';
     // Show the content warning in the review (as a banner above the body) so it
@@ -435,7 +459,7 @@ begin
       else if guildSlug <> '' then
         Result := CreateGuildThread(sess, guildSlug, buffer, newId, err, title, topics)
       else
-        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw, vis, cw);
+        Result := CreateEntry(sess, buffer, newId, err, title, topics, nsfw, vis, cw, noReplies);
       if Result then
       begin
         Limiter.Note(action);

@@ -160,6 +160,14 @@ var
       Result := '';
   end;
 
+  function RepliesTag(disabled: Boolean): string;
+  begin
+    if disabled then
+      Result := '   ·   replies off'
+    else
+      Result := '';
+  end;
+
   { The entry's visibility word — 'public' (visible without login) or 'private'. }
   function VisWord(isPublic: Boolean): string;
   begin
@@ -257,7 +265,8 @@ var
 
     // Entry header + body (owner -1).
     AddLine('@' + entry.AuthorUsername + '   ·   ' + RelativeTime(entry.CreatedAt)
-      + '   ·   ' + VisWord(entry.IsPublic) + EditedTag(entry.EditedAt),
+      + '   ·   ' + VisWord(entry.IsPublic) + EditedTag(entry.EditedAt)
+      + RepliesTag(entry.RepliesDisabled),
       cpAccent, True, -1);
     if (not Gated) and (Trim(entry.Title) <> '') then
       AddLine(entry.Title, cpText, True, -1);
@@ -644,7 +653,12 @@ var
         selDesc := 'entry'
       else
         selDesc := 'reply @' + replies[selReply].AuthorUsername;
-      status := ' ' + selDesc + '   ·   ↑↓/Space scroll · j/k select · c reply · b bookmark · p profile';
+      status := ' ' + selDesc + '   ·   ↑↓/Space scroll · j/k select · ';
+      if entry.RepliesDisabled then
+        status := status + 'replies off'
+      else
+        status := status + 'c reply';
+      status := status + ' · b bookmark · p profile';
       if watching then
         status := status + ' · w unwatch'
       else
@@ -777,6 +791,9 @@ begin
           BuildLines; // re-render body/images with the new gate state
         end;
       Ord('c'):
+        if entry.RepliesDisabled then
+          Info('Replies are disabled on this entry.')
+        else
         begin
           if selReply = -1 then
           begin

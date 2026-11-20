@@ -82,6 +82,13 @@ Auto-watched when you reply or are @mentioned; also manual watch/unwatch.
       (yt-dlp fetches, mpv plays stdin) via `setsid`, so `StopAudio` can `kill(-pgid)` the
       whole pipeline, not just the shell. `--no-playlist` + `bestaudio/best` cover radio
       URLs and direct (latex-origin) files; both legs silence stderr. New dep: `setsid`.
+- [x] **Disable replies (API 0.9.3)** — `TEntry.RepliesDisabled` parsed; the composer
+      offers a disable-replies toggle on new feed entries (`CreateEntry` sends
+      `repliesDisabled`, shown in the review; fixed once published, so not editable). The
+      thread view shows a `· replies off` marker and blocks `c` with a message instead of
+      letting the server 403 a wasted reply. Parse unit-tested.
+- [x] **cIRC 0.9.4 help** — `/tarot` and `/spin` added to the `/help` reference (they
+      already work via the pass-through slash-command path, rendering as action messages).
 - [x] **Richer markdown rendering** — new `ui/csmarkdown.pas` renders decoded content
       into styled runs (bold, italic→underline, `code`, links, headings, `-`/`1.` lists,
       `>` quotes, `---` rules); CsUI gained a run/underline draw path (`TStyleRuns`,
